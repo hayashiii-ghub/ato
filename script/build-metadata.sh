@@ -13,6 +13,8 @@ metadata_error() { printf 'Build metadata: %s\n' "$1" >&2; exit 1; }
   metadata_error 'APP_BUILD must be an integer from 1 to 9999.'
 [[ "$CONFIGURATION" == release || "$CONFIGURATION" == debug ]] || \
   metadata_error 'CONFIGURATION must be release or debug.'
+source "$(dirname "${BASH_SOURCE[0]}")/sparkle.sh"
+usage_load_sparkle_configuration "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)" "$CONFIGURATION" || exit 1
 [[ "$SOURCE_REVISION" =~ ^[0-9a-fA-F]{40}$ ]] || \
   metadata_error 'SOURCE_REVISION must be the full 40-character HEAD commit hash.'
 SOURCE_REVISION="$(printf '%s' "$SOURCE_REVISION" | tr '[:upper:]' '[:lower:]')"

@@ -13,6 +13,7 @@ mkdir -p "$APP/Contents/Helpers" "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN_DIR/UsageRings" "$APP/Contents/MacOS/UsageRings"
 cp "$BIN_DIR/UsageRingsStatusline" "$APP/Contents/Helpers/UsageRingsStatusline"
 cp "$BIN_DIR/UsageRingsWidget" "$WIDGET/Contents/MacOS/UsageRingsWidget"
+usage_embed_sparkle "$ROOT_DIR" "$APP"
 cp -R "$BIN_DIR/UsageRings_UsageCore.bundle" "$APP/Contents/Resources/"
 cp -R "$BIN_DIR/UsageRings_UsageCore.bundle" "$WIDGET/Contents/Resources/"
 cp LICENSE THIRD_PARTY_NOTICES.md "$APP/Contents/Resources/"
@@ -64,6 +65,13 @@ for BUNDLE in "$APP" "$WIDGET"; do
   /usr/bin/plutil -insert UsageRingsSourceDirty -bool "$SOURCE_DIRTY" "$BUNDLE/Contents/Info.plist"
   /usr/bin/plutil -insert UsageRingsBuildConfiguration -string "$CONFIGURATION" "$BUNDLE/Contents/Info.plist"
 done
+/usr/bin/plutil -insert SUFeedURL -string "$SPARKLE_FEED_URL" "$APP/Contents/Info.plist"
+if [[ -n "$SPARKLE_PUBLIC_ED_KEY" ]]; then
+  /usr/bin/plutil -insert SUPublicEDKey -string "$SPARKLE_PUBLIC_ED_KEY" "$APP/Contents/Info.plist"
+else
+  /usr/bin/plutil -insert SUEnableAutomaticChecks -bool false "$APP/Contents/Info.plist"
+fi
+usage_sign_sparkle "$APP"
 codesign "${SIGNING_ARGS[@]}" --entitlements "$ROOT_DIR/Assets/Widget.entitlements" "$WIDGET"
 codesign "${SIGNING_ARGS[@]}" "$APP/Contents/Helpers/UsageRingsStatusline"
 codesign "${SIGNING_ARGS[@]}" "$APP"

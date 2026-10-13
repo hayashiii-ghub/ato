@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import Sparkle
 
 @main
 struct UsageRingsMain {
@@ -15,18 +16,27 @@ struct UsageRingsMain {
 @MainActor
 final class UsageRingsApplication: NSObject, NSApplicationDelegate {
     private let store = UsageStore()
-    private lazy var window = UsageWindowController(store: store)
+    private let updateController = AppUpdateController()
+    private lazy var window = UsageWindowController(store: store, updateController: updateController)
     private var statusItem: NSStatusItem?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        updateController.start()
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         item.button?.image = NSImage(systemSymbolName: "chart.donut", accessibilityDescription: "Usage Rings")
         let menu = NSMenu()
         menu.addItem(NSMenuItem(title: "Open Usage Rings", action: #selector(show), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "Refresh", action: #selector(refresh), keyEquivalent: ""))
+        let checkForUpdatesItem = NSMenuItem(
+            title: "Check for Updates…",
+            action: #selector(SPUStandardUpdaterController.checkForUpdates(_:)),
+            keyEquivalent: ""
+        )
+        menu.addItem(checkForUpdatesItem)
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit Usage Rings", action: #selector(quit), keyEquivalent: "q"))
         for entry in menu.items { entry.target = self }
+        checkForUpdatesItem.target = updateController.controller
         item.menu = menu
         statusItem = item
         store.startIfEnabled()

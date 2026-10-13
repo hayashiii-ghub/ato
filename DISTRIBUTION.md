@@ -1,7 +1,7 @@
 # Distribution
 
-Usage Rings uses the same download flow as Context: a GitHub Release DMG, then
-drag the app into Applications. The app is **not notarized by Apple**. Paid
+Usage Rings uses the same download flow as `cc:`. Download a GitHub Release DMG,
+then drag the app into Applications. The app is **not notarized by Apple**. Paid
 Apple Developer membership is not part of this distribution plan.
 
 ## Install a release
@@ -35,7 +35,7 @@ installer removes quarantine attributes or disables Gatekeeper. Claude Code
 integration is optional; see below before changing an existing custom status line.
 
 For verification, download `usage-rings-macos.zip`, `usage-rings-macos.dmg`,
-`usage-rings-macos.json`, and `usage-rings-macos.sha256` from the same release,
+`appcast.xml`, `usage-rings-macos.json`, and `usage-rings-macos.sha256` from the same release,
 then run `shasum -a 256 -c usage-rings-macos.sha256` in that directory. The JSON
 records version, build, source commit, architecture, signing state and hashes.
 Neither archive includes account credentials, settings, or usage caches.
@@ -44,30 +44,63 @@ The development Mac has confirmed the updated app and small widget. Fresh
 installation, first-launch approval, and widget registration on a separate Mac
 remain untested; publishing an unnotarized build does not imply those were tested.
 
+## In-app updates
+
+Sparkle provides the standard **Check for Updates…** window, download, and
+relaunch-to-install flow. The feed is
+`https://github.com/hayashiii-ghub/usage-rings/releases/latest/download/appcast.xml`.
+The first release with Sparkle must be installed manually by users of older
+versions. Keep the app bundle identifier and increase the build number for
+subsequent releases.
+
+Update archives are verified with an EdDSA public key embedded in the app. The
+corresponding private key belongs in the macOS login Keychain under the dedicated
+account `work.hayashigoto.UsageRings`. Create it only with the release operator's
+approval, using Sparkle's `generate_keys --account work.hayashigoto.UsageRings`.
+Save the printed public key as `public_ed_key` in `script/sparkle-config.json`;
+that file also records the feed URL and Keychain account. The account name does
+not contain the private key. Keep the private key out of source, command arguments, logs, and release assets;
+only the public key belongs in the repository. Losing the private key can prevent
+installed clients from accepting future updates.
+
+Packaging uses Sparkle’s `generate_appcast` with the dedicated Keychain account
+to sign the final ZIP and record its signature in `appcast.xml`. A release is
+ready for in-app updating only after that appcast and matching ZIP are published
+together. Uploading files or publishing a GitHub
+release still requires explicit approval. Until that feed is published, a real
+update check can fail even when the local framework integration is correct.
+Existing users' preferences, provider connections, and widget data are retained.
+
+The updater does not change Apple's signing or notarization status. Follow the
+same unnotarized distribution requirements below; do not bypass Gatekeeper.
+
 ## Build and package an unnotarized release
 
 From a clean committed checkout with macOS 26+ and Xcode:
 
 ```sh
 make check
-APP_VERSION=0.1.3 APP_BUILD=5 make build
+APP_VERSION=0.1.5 APP_BUILD=7 make build
 make package-unnotarized
 ```
 
 This explicitly selects unnotarized distribution and creates a versioned folder
-under `dist/packages/` with four assets:
+under `dist/packages/` with five assets:
 
 - `usage-rings-macos.dmg`: compressed disk image with the app, Applications shortcut,
   and installation notes.
 - `usage-rings-macos.zip`: the same app bundle.
-- `usage-rings-macos.json`: build and signing metadata plus archive hashes.
-- `usage-rings-macos.sha256`: checksums for the DMG, ZIP, and JSON.
+- `appcast.xml`: Sparkle update information and the ZIP’s EdDSA signature, using
+  an immutable `releases/download/v<version>/` URL.
+- `usage-rings-macos.json`: build and signing metadata plus archive and appcast hashes.
+- `usage-rings-macos.sha256`: checksums for the DMG, ZIP, appcast, and JSON.
 
 Stable asset names support GitHub's `releases/latest/download` links; the local
 versioned directory preserves earlier builds. Packaging rejects dirty-source or
 debug builds, mismatched host/widget metadata, broken signatures, and invalid
-entitlements. It extracts the ZIP and mounts the DMG read-only to recheck their
-contents, then detaches it. It does not install or launch the app.
+entitlements. It checks the embedded Sparkle components, extracts the ZIP and mounts the DMG
+read-only to recheck their contents, then detaches it. Missing update configuration
+or archive signatures prevent release packaging. It does not install or launch the app.
 
 The mode never calls notarization or changes system security settings. Ad-hoc
 signing checks bundle integrity but does not verify a developer's identity.
@@ -86,6 +119,12 @@ Xcode but no paid Apple Developer membership. The source installer installs to
 `~/Applications` and connects Claude Code's status line if no custom command
 exists; custom commands are preserved. Use `make build` to inspect the bundle
 without installing it or connecting the helper.
+
+Before the first signing-key setup, `CONFIGURATION=debug make build` can build a
+local app with updates disabled. Release builds require the public key. To test
+a configured build without changing its saved automatic-check preference, launch
+it with `-SUEnableAutomaticChecks NO`. A Debug build does not rewrite that
+preference.
 
 ## Optional notarized build
 

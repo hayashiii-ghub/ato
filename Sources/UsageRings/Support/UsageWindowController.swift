@@ -4,9 +4,13 @@ import SwiftUI
 @MainActor
 final class UsageWindowController {
     private let store: UsageStore
+    private let updateController: AppUpdateController
     private var window: NSWindow?
 
-    init(store: UsageStore) { self.store = store }
+    init(store: UsageStore, updateController: AppUpdateController) {
+        self.store = store
+        self.updateController = updateController
+    }
 
     func show() {
         if window == nil {
@@ -15,7 +19,7 @@ final class UsageWindowController {
             window.title = "Usage Rings"
             window.isReleasedWhenClosed = false
             window.contentView = NSHostingView(rootView: ScrollView {
-                UsageDetailsView(store: store)
+                UsageDetailsView(store: store, updateController: updateController)
                     .frame(maxWidth: .infinity, alignment: .topLeading)
             })
             window.center()

@@ -1,7 +1,7 @@
 # Usage Rings
 
 Personal macOS widget for remaining Codex, Claude, Cursor, and Grok Bot usage.
-Requires macOS 26+; Xcode is only needed to build from source. This is independent of Context.
+Requires macOS 26+; Xcode is only needed to build from source. This is independent of cc:.
 
 ## Install or update
 
@@ -18,8 +18,16 @@ does not read account credentials, start Codex, or contact usage providers.
 Upgrading from an earlier version also requires this explicit enable action;
 the old on/off preference alone does not authorize the new connection method.
 Keep the app running;
-it refreshes every five minutes and after waking from sleep. There is no automatic
-updater. Add the app to Login Items if desired.
+it refreshes every five minutes and after waking from sleep. Choose
+**Check for Updates…** in the app or menu-bar menu to use the standard Sparkle
+update window. It can download a signed update and relaunch the app to install
+it. Sparkle asks whether to check for updates automatically; enabling usage
+monitoring does not enable that preference. Add the app to Login Items if desired.
+
+Previously published versions do not contain this updater. Install the first
+release that includes it manually once, then use in-app updates for later
+releases. The updater requires a published signed update feed; see
+[Distribution](DISTRIBUTION.md#in-app-updates) for release preparation.
 
 The app is **not notarized by Apple**. macOS may block the first launch. If you
 trust the source, follow Apple's [per-app approval instructions](https://support.apple.com/102445)
@@ -34,8 +42,8 @@ manually. Paid Apple Developer membership is not required.
 
 ## Distribution
 
-`make package-unnotarized` produces the DMG, ZIP, build manifest, and checksums for
-this release route. `make package-draft` creates a review ZIP. The optional
+`make package-unnotarized` produces the DMG, ZIP, Sparkle appcast with the ZIP’s signature, build
+manifest, and checksums for this release route. `make package-draft` creates a review ZIP. The optional
 `make package` command requires Developer ID signing and notarization; those are
 not part of the current release plan. See [DISTRIBUTION.md](DISTRIBUTION.md).
 
@@ -87,8 +95,8 @@ To disconnect only this integration while keeping other Claude settings:
 python3 script/claude-statusline-setup.py --uninstall
 ```
 
-Login credentials stay out of the repository, logs, and widget data. The host contacts
-only the matching provider endpoints. The sandboxed widget reads sanitized values
+Login credentials stay out of the repository, logs, and widget data. Usage requests go to the matching provider endpoints. Update checks and downloads
+use the GitHub release feed; Sparkle verifies downloaded archives before installing. The sandboxed widget reads sanitized values
 from the loopback-only `127.0.0.1:52388/v1/usage` bridge, then caches them in its own
 container. Other local processes can read those usage values; there is no LAN listener.
 
@@ -112,6 +120,9 @@ authenticated HTTPS requests to `cursor.com` and `api2.cursor.sh` respectively,
 using the local Cursor session. These requests contain the credentials required
 by that service; redirects are rejected. Claude usage is read locally from
 official Claude Code status-line output; Usage Rings makes no Claude API requests.
+Update checks and downloads contact GitHub separately from usage monitoring.
+Sparkle manages its own update-check preference; it does not send provider credentials
+or usage readings with these requests.
 
 ### Does it read my login details or conversations?
 

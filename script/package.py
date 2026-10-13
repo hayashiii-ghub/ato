@@ -1,19 +1,42 @@
 #!/usr/bin/env python3
 """Package verified macOS bundles with an explicit notarized or unnotarized mode."""
 import argparse
+import base64
 import hashlib
 import json
+import os
 from pathlib import Path
 import plistlib
 import re
 import subprocess
 import tempfile
+from urllib.parse import urlsplit
+import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parent.parent
 METADATA_KEYS = (
     "CFBundleShortVersionString", "CFBundleVersion", "LSMinimumSystemVersion",
     "UsageRingsSourceRevision", "UsageRingsSourceDirty", "UsageRingsBuildConfiguration",
 )
+SPARKLE_NAMESPACE = "http://www.andymatuschak.org/xml-namespaces/sparkle"
+
+
+def read_sparkle_configuration():
+    configuration = json.loads((ROOT / "script/sparkle-config.json").read_text())
+    configuration["feed_url"] = os.environ.get("SPARKLE_FEED_URL", configuration["feed_url"])
+    configuration["public_ed_key"] = os.environ.get("SPARKLE_PUBLIC_ED_KEY", configuration["public_ed_key"])
+    feed = urlsplit(configuration["feed_url"])
+    if feed.scheme != "https" or not feed.hostname or feed.username or feed.password or feed.fragment:
+        raise ValueError("Sparkle feed must be an HTTPS URL without credentials or a fragment.")
+    try:
+        key = base64.b64decode(configuration["public_ed_key"], validate=True)
+    except (ValueError, TypeError) as error:
+        raise ValueError("Sparkle public key is not configured correctly.") from error
+    if len(key) != 32:
+        raise ValueError("Sparkle public key is not configured; release packaging is disabled.")
+    if not re.fullmatch(r"[A-Za-z0-9._-]+", configuration["keychain_account"]):
+        raise ValueError("Sparkle keychain account is invalid.")
+    return configuration
 
 
 def run(*args):
@@ -48,6 +71,11 @@ def read_metadata(app):
         raise ValueError("Packaging requires CONFIGURATION=release.")
     if host["LSMinimumSystemVersion"] != "26.0":
         raise ValueError("Unexpected minimum macOS version.")
+    sparkle = read_sparkle_configuration()
+    if host.get("SUFeedURL") != sparkle["feed_url"] or host.get("SUPublicEDKey") != sparkle["public_ed_key"]:
+        raise ValueError("Sparkle feed or public key is missing or differs from the build configuration.")
+    if host.get("SUEnableAutomaticChecks") is False:
+        raise ValueError("Release Sparkle update checks are not configured.")
     return host, widget
 
 
@@ -61,6 +89,22 @@ def inspect_bundle(app, mode):
         "widget": (widget, widget / "Contents/MacOS/UsageRingsWidget"),
         "statusline": (app / "Contents/Helpers/UsageRingsStatusline",) * 2,
     }
+    framework = app / "Contents/Frameworks/Sparkle.framework"
+    version = framework / "Versions/Current"
+    sparkle_components = {
+        "sparkle": (framework, framework / "Sparkle"),
+        "sparkle-autoupdate": (version / "Autoupdate",) * 2,
+        "sparkle-updater": (version / "Updater.app", version / "Updater.app/Contents/MacOS/Updater"),
+        "sparkle-downloader": (version / "XPCServices/Downloader.xpc", version / "XPCServices/Downloader.xpc/Contents/MacOS/Downloader"),
+        "sparkle-installer": (version / "XPCServices/Installer.xpc", version / "XPCServices/Installer.xpc/Contents/MacOS/Installer"),
+    }
+    components.update(sparkle_components)
+    dependencies = run("/usr/bin/otool", "-L", str(app / "Contents/MacOS/UsageRings")).stdout
+    if not re.search(r"@rpath/Sparkle\.framework/Versions/[^/]+/Sparkle", dependencies):
+        raise ValueError("The host executable does not link the embedded Sparkle.framework.")
+    rpaths = run("/usr/bin/otool", "-l", str(app / "Contents/MacOS/UsageRings")).stdout
+    if "@executable_path/../Frameworks" not in rpaths:
+        raise ValueError("The host executable cannot locate embedded Sparkle.framework.")
     for resource in ("LICENSE", "THIRD_PARTY_NOTICES.md", "AppIcon.icns"):
         if not (app / "Contents/Resources" / resource).is_file():
             raise ValueError(f"Missing bundled resource: {resource}")
@@ -74,9 +118,15 @@ def inspect_bundle(app, mode):
         archs = sorted(run("/usr/bin/lipo", "-archs", str(executable)).stdout.split())
         if not archs or not set(archs) <= {"arm64", "x86_64"}:
             raise ValueError(f"Unsupported architecture: {name}")
-        if architecture is not None and architecture != archs:
-            raise ValueError("App, widget, and helper architectures differ.")
-        architecture = archs
+        if name in sparkle_components:
+            if not set(architecture or []) <= set(archs):
+                raise ValueError(f"Sparkle architecture is incompatible with the app: {name}")
+            if not executable.resolve().is_relative_to(app.resolve()):
+                raise ValueError(f"Sparkle code points outside the app: {name}")
+        else:
+            if architecture is not None and architecture != archs:
+                raise ValueError("App, widget, and helper architectures differ.")
+            architecture = archs
         run("/usr/bin/codesign", "--verify", "--strict", str(code))
         details = run("/usr/bin/codesign", "-d", "--verbose=4", str(code)).stderr
         developer_id = "Authority=Developer ID Application:" in details
@@ -118,7 +168,67 @@ def inspect_bundle(app, mode):
         "signatures": signatures,
         "notarization": "stapled-and-gatekeeper-accepted" if require_notarization else "not-verified",
         "distribution": mode,
+        "updater": {"feed_url": metadata["SUFeedURL"], "public_ed_key": metadata["SUPublicEDKey"]},
     }
+
+
+def validate_appcast(appcast, archive, manifest, expected_url, staging):
+    root = ET.parse(appcast).getroot()
+    items = root.findall("./channel/item")
+    if len(items) != 1:
+        raise ValueError("The generated appcast must contain exactly this release.")
+    item = items[0]
+    enclosure = item.find("enclosure")
+    signature = enclosure.get(f"{{{SPARKLE_NAMESPACE}}}edSignature", "") if enclosure is not None else ""
+    try:
+        signature_bytes = base64.b64decode(signature, validate=True)
+    except ValueError as error:
+        raise ValueError("The generated update has no valid Ed25519 signature.") from error
+    if enclosure is None or len(signature_bytes) != 64:
+        raise ValueError("The generated update has no valid Ed25519 signature.")
+    version = enclosure.get(f"{{{SPARKLE_NAMESPACE}}}version") or item.findtext(f"{{{SPARKLE_NAMESPACE}}}version")
+    short_version = enclosure.get(f"{{{SPARKLE_NAMESPACE}}}shortVersionString") or item.findtext(f"{{{SPARKLE_NAMESPACE}}}shortVersionString")
+    minimum_system = item.findtext(f"{{{SPARKLE_NAMESPACE}}}minimumSystemVersion")
+    if (enclosure.get("url") != expected_url or enclosure.get("length") != str(archive.stat().st_size)
+            or version != manifest["build"] or short_version != manifest["version"]
+            or minimum_system != manifest["minimum_macos"]):
+        raise ValueError("The generated appcast does not match this verified archive.")
+    # Verify against the key embedded in the app rather than accepting a valid
+    # signature from a different keychain account.
+    run("/usr/bin/swift", "-module-cache-path", str(staging / "swift-module-cache"),
+        str(ROOT / "script/verify_sparkle_update.swift"), manifest["updater"]["public_ed_key"],
+        signature, str(archive))
+    return signature
+
+
+def create_appcast(archive, appcast, manifest, staging):
+    configuration = read_sparkle_configuration()
+    executable = ROOT / ".build/artifacts/sparkle/Sparkle/bin/generate_appcast"
+    if not executable.is_file():
+        raise ValueError("Sparkle generate_appcast is missing; resolve the package dependency first.")
+    archives = staging / "sparkle-archives"
+    archives.mkdir()
+    run("/usr/bin/ditto", str(archive), str(archives / archive.name))
+    prefix = os.environ.get("SPARKLE_DOWNLOAD_URL_PREFIX",
+                            f"https://github.com/hayashiii-ghub/usage-rings/releases/download/v{manifest['version']}/")
+    parsed = urlsplit(prefix)
+    if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password or parsed.fragment:
+        raise ValueError("Sparkle download prefix must be an HTTPS URL without credentials or a fragment.")
+    if not prefix.endswith("/"):
+        raise ValueError("Sparkle download prefix must end in a slash.")
+    args = [str(executable), "--download-url-prefix", prefix, "--maximum-deltas", "0",
+            "--link", "https://github.com/hayashiii-ghub/usage-rings/releases", "-o", str(appcast)]
+    private_key = os.environ.get("SPARKLE_ED_PRIVATE_KEY")
+    if private_key:
+        args += ["--ed-key-file", "-"]
+    else:
+        args += ["--account", configuration["keychain_account"]]
+    args.append(str(archives))
+    result = subprocess.run(args, input=private_key, text=True, capture_output=True)
+    if result.returncode or not appcast.is_file():
+        # Signing diagnostics can include key data. Never copy them into logs.
+        raise ValueError("Sparkle appcast generation failed; the expected signing key may be unavailable.")
+    return validate_appcast(appcast, archive, manifest, prefix + archive.name, staging)
 
 
 def create_disk_image(app, staging, destination, mode):
@@ -175,6 +285,8 @@ def package(app, output, mode):
         files = [basename + suffix for suffix in (".zip", ".json", ".sha256")]
         if mode == "unnotarized":
             files.append(basename + ".dmg")
+        if mode != "draft-unnotarized":
+            files.append("appcast.xml")
         if (mode == "unnotarized" and destination.exists()) or any((destination / file).exists() for file in files):
             raise ValueError("An artifact with this version/build/revision already exists; use a new build number or remove the old local artifact deliberately.")
         archive = staging / files[0]
@@ -192,6 +304,13 @@ def package(app, output, mode):
             image_digest = hashlib.sha256(disk_image.read_bytes()).hexdigest()
             manifest.update({"disk_image": files[3], "disk_image_sha256": image_digest})
             checksums.append(f"{image_digest}  {files[3]}")
+        if mode != "draft-unnotarized":
+            appcast = staging / "appcast.xml"
+            signature = create_appcast(archive, appcast, manifest, staging)
+            appcast_digest = hashlib.sha256(appcast.read_bytes()).hexdigest()
+            manifest.update({"appcast": "appcast.xml", "appcast_sha256": appcast_digest,
+                             "update_ed_signature": signature})
+            checksums.append(f"{appcast_digest}  appcast.xml")
         (staging / files[1]).write_text(json.dumps(manifest, indent=2) + "\n")
         manifest_digest = hashlib.sha256((staging / files[1]).read_bytes()).hexdigest()
         checksums.append(f"{manifest_digest}  {files[1]}")
@@ -219,7 +338,7 @@ def main():
     try:
         mode = "draft-unnotarized" if args.draft else "unnotarized" if args.unnotarized else "notarized"
         archive = package(args.app.resolve(), args.output.resolve(), mode)
-    except (ValueError, OSError, plistlib.InvalidFileException) as error:
+    except (ValueError, OSError, KeyError, TypeError, plistlib.InvalidFileException, ET.ParseError) as error:
         parser.exit(1, f"Packaging: {error}\n")
     print(archive)
 

@@ -9,9 +9,15 @@ let package = Package(
         .executable(name: "UsageRingsStatusline", targets: ["UsageRingsStatusline"]),
         .executable(name: "UsageRingsWidget", targets: ["UsageRingsWidget"])
     ],
+    dependencies: [
+        .package(url: "https://github.com/sparkle-project/Sparkle", exact: "2.10.0")
+    ],
     targets: [
         .target(name: "UsageCore", resources: [.copy("Resources")]),
-        .executableTarget(name: "UsageRings", dependencies: ["UsageCore"]),
+        .executableTarget(name: "UsageRings", dependencies: [
+            "UsageCore",
+            .product(name: "Sparkle", package: "Sparkle")
+        ]),
         .executableTarget(name: "UsageRingsStatusline", dependencies: ["UsageCore"]),
         .executableTarget(name: "WidgetPreview", dependencies: ["UsageCore"], path: "Tools/WidgetPreview"),
         .executableTarget(

@@ -3,18 +3,30 @@ import SwiftUI
 
 struct UsageDetailsView: View {
     @ObservedObject var store: UsageStore
+    @ObservedObject var updateController: AppUpdateController
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             HStack {
                 Text("Usage Rings").font(.title2.weight(.semibold))
                 Spacer()
+                Button("Check for Updates…") {
+                    updateController.controller.checkForUpdates(nil)
+                }
+                .disabled(!updateController.canCheckForUpdates)
+                .help(updateController.configurationMessage ?? "Check for a new version of Usage Rings.")
                 Button {
                     Task { await store.refresh() }
                 } label: {
                     Label("Refresh", systemImage: "arrow.clockwise")
                 }
                 .disabled(!store.isEnabled || store.isRefreshing)
+            }
+
+            if let message = updateController.configurationMessage {
+                Text(message)
+                    .font(.caption).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             if store.needsConsent {
