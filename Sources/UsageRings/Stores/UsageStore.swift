@@ -61,7 +61,9 @@ final class UsageStore: ObservableObject {
         guard !needsConsent, isEnabled, !isRefreshing else { return }
         isRefreshing = true
         let requestGeneration = generation
-        defer { isRefreshing = false }
+        defer {
+            if generation == requestGeneration { isRefreshing = false }
+        }
         async let codex = fetch(.codex)
         async let cursor = fetch(.cursor)
         async let claude = fetch(.claude)
@@ -86,12 +88,7 @@ final class UsageStore: ObservableObject {
         }
         pollingTask = Task { [weak self] in
             while !Task.isCancelled {
-                // A prior generation may still be unwinding after off/on. Start the
-                // newly authorized read promptly instead of sleeping for five minutes.
-                if self?.isRefreshing == true {
-                    do { try await Task.sleep(for: .milliseconds(100)) } catch { return }
-                    continue
-                }
+                guard self != nil else { return }
                 await self?.refresh()
                 do { try await Task.sleep(for: .seconds(5 * 60)) } catch { return }
             }
@@ -101,6 +98,7 @@ final class UsageStore: ObservableObject {
     private func stop() {
         pollingTask?.cancel()
         pollingTask = nil
+        isRefreshing = false
         if let wakeObserver { NSWorkspace.shared.notificationCenter.removeObserver(wakeObserver) }
         wakeObserver = nil
         snapshot = .empty

@@ -6,13 +6,18 @@ DESTINATION="$HOME/Applications/Usage Rings.app"
 if [[ -e "$DESTINATION" ]]; then
   test "$(plutil -extract CFBundleIdentifier raw "$DESTINATION/Contents/Info.plist")" = "work.hayashigoto.UsageRings"
 fi
+APPLICATIONS_DIR="$(dirname "$DESTINATION")"
+mkdir -p "$APPLICATIONS_DIR"
+INSTALL_WORK_DIR="$(mktemp -d "$APPLICATIONS_DIR/.usage-rings-XXXXXX")"
+trap 'rm -rf "$INSTALL_WORK_DIR"' EXIT
+STAGED_APP="$INSTALL_WORK_DIR/Usage Rings.app"
+ditto "$ROOT_DIR/dist/Usage Rings.app" "$STAGED_APP"
+codesign --verify --deep --strict "$STAGED_APP"
 pkill -x UsageRings >/dev/null 2>&1 || true
-mkdir -p "$HOME/Applications"
 rm -rf "$DESTINATION"
-ditto "$ROOT_DIR/dist/Usage Rings.app" "$DESTINATION"
-codesign --verify --deep --strict "$DESTINATION"
+mv "$STAGED_APP" "$DESTINATION"
 # WidgetKit can keep the previous executable alive after the app is replaced.
-# Stop only this installation's widget after copying, so its next launch uses
+# Stop only this installation's widget after replacement, so its next launch uses
 # the new bundle and its timeline passes WidgetKit's bundle-version validation.
 WIDGET_EXECUTABLE="$DESTINATION/Contents/PlugIns/UsageRingsWidget.appex/Contents/MacOS/UsageRingsWidget"
 while IFS= read -r widget_pid; do

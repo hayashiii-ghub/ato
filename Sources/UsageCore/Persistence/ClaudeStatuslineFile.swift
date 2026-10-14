@@ -40,7 +40,13 @@ public enum ClaudeStatuslineFile {
         let previous = read(from: location)
         if let previous, previous.responseMarkers.contains(input.responseMarker) { return previous }
         let markers = Array(((previous?.responseMarkers ?? []) + [input.responseMarker]).suffix(256))
-        let cache = ClaudeStatuslineCache(usage: input.usage, responseMarkers: markers, version: 1)
+        var usage = input.usage
+        // Concurrent status-line processes can acquire the lock out of reading order.
+        if let previous, let updatedAt = usage.updatedAt, let previousUpdatedAt = previous.usage.updatedAt,
+           updatedAt < previousUpdatedAt {
+            usage = previous.usage
+        }
+        let cache = ClaudeStatuslineCache(usage: usage, responseMarkers: markers, version: 1)
         try JSONEncoder().encode(cache).write(to: location, options: .atomic)
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: location.path)
         return cache

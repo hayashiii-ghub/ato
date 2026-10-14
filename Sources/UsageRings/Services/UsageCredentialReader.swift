@@ -65,7 +65,12 @@ enum UsageCredentialReader {
 
     private static func payload(_ token: String) -> [String: Any]? {
         let parts = token.split(separator: ".", omittingEmptySubsequences: false)
-        guard parts.count == 3 else { return nil }
+        guard parts.count == 3, parts.allSatisfy({ part in
+            !part.isEmpty && part.utf8.allSatisfy { byte in
+                (65...90).contains(byte) || (97...122).contains(byte)
+                    || (48...57).contains(byte) || byte == 45 || byte == 95
+            }
+        }) else { return nil }
         var encoded = String(parts[1]).replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/")
         encoded += String(repeating: "=", count: (4 - encoded.count % 4) % 4)
         guard let data = Data(base64Encoded: encoded) else { return nil }

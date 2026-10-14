@@ -28,16 +28,16 @@ struct UsageTimelineProvider: TimelineProvider {
 
     private func sample() -> UsageEntry {
         let now = Date()
-        var services = [
+        let services = [
             ServiceUsage(service: .codex, state: .ready,
                          windows: [UsageWindow(id: "week", title: "Week", usedPercent: 24, resetsAt: nil)], updatedAt: now),
+            ServiceUsage(service: .claude, state: .ready,
+                         windows: [UsageWindow(id: "five_hour", title: "5 hours", usedPercent: 18, resetsAt: nil)], updatedAt: now),
             ServiceUsage(service: .cursor, state: .ready,
                          windows: [UsageWindow(id: "total", title: "This month", usedPercent: 59, resetsAt: nil)], updatedAt: now),
-            ServiceUsage(service: .claude, state: .ready,
-                         windows: [UsageWindow(id: "five_hour", title: "5 hours", usedPercent: 18, resetsAt: nil)], updatedAt: now)
+            ServiceUsage(service: .grokBot, state: .ready,
+                         windows: [UsageWindow(id: "week", title: "Week", usedPercent: 13, resetsAt: nil)], updatedAt: now)
         ]
-        services.append(ServiceUsage(service: .grokBot, state: .ready,
-                                     windows: [UsageWindow(id: "week", title: "Week", usedPercent: 13, resetsAt: nil)], updatedAt: now))
         return UsageEntry(date: now, snapshot: UsageSnapshot(services: services))
     }
 }

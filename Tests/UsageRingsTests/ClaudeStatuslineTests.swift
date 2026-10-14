@@ -72,7 +72,7 @@ struct ClaudeStatuslineTests {
         let newResponse = try #require(try ClaudeStatusline.parse(payload(duration: 2000), now: now.addingTimeInterval(20)))
         try ClaudeStatuslineFile.write(newResponse, to: location)
         #expect(ClaudeStatuslineFile.read(from: location)?.usage.updatedAt == now.addingTimeInterval(20))
-        let saved = try String(contentsOf: location)
+        let saved = try String(contentsOf: location, encoding: .utf8)
         for forbidden in ["private-session", "other-session", "transcript", "workspace", "must-not-be-copied", "spend_limit"] {
             #expect(!saved.contains(forbidden))
         }
@@ -87,10 +87,27 @@ struct ClaudeStatuslineTests {
         #expect(ClaudeStatuslineFile.read(from: location) == nil)
         let input = try #require(try ClaudeStatusline.parse(payload(), now: now))
         try ClaudeStatuslineFile.write(input, to: location)
-        let saved = try String(contentsOf: location)
+        let saved = try String(contentsOf: location, encoding: .utf8)
         try saved.replacingOccurrences(of: "claude", with: "codex").write(to: location, atomically: true, encoding: .utf8)
         #expect(ClaudeStatuslineFile.read(from: location) == nil)
         try Data("broken".utf8).write(to: location)
         #expect(ClaudeStatuslineFile.read(from: location) == nil)
+    }
+
+    @Test func delayedWriterDoesNotReplaceNewerUsageOrRenewFreshnessWhenRepeated() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let location = folder.appendingPathComponent("usage.json")
+        let earlierWindows = ["five_hour": ["used_percentage": 90, "resets_at": now.timeIntervalSince1970 + 600]]
+        let earlier = try #require(try ClaudeStatusline.parse(payload(duration: 1000, windows: earlierWindows), now: now))
+        let later = try #require(try ClaudeStatusline.parse(payload(duration: 2000), now: now.addingTimeInterval(10)))
+        try ClaudeStatuslineFile.write(later, to: location)
+        let cache = try ClaudeStatuslineFile.write(earlier, to: location)
+        #expect(cache.usage == later.usage)
+        #expect(cache.responseMarkers.contains(earlier.responseMarker))
+
+        let repeated = try #require(try ClaudeStatusline.parse(payload(duration: 1000), now: now.addingTimeInterval(1300)))
+        try ClaudeStatuslineFile.write(repeated, to: location)
+        #expect(ClaudeStatuslineFile.read(from: location)?.usage == later.usage)
     }
 }
