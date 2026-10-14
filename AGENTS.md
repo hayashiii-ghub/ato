@@ -4,7 +4,7 @@ Personal macOS usage monitor, extracted from Context. Keep the four providers an
 WidgetKit extension independent of Context. Local distribution packaging is allowed.
 Keep initial GitHub releases as drafts; public publishing requires explicit approval.
 
-- `Sources/UsageRings`: menu-bar app, local session readers, polling and detail window.
+- `Sources/UsageRings`: background app, local session readers, polling and detail window.
 - `Sources/UsageCore`: shared models, parsers, ring views and icons.
 - `Sources/UsageRingsWidget`: WidgetKit extension and sanitized snapshot cache.
 - Validation: `make check`, then `make build` for embedded bundle/signing checks.

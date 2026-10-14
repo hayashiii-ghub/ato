@@ -1,3 +1,4 @@
+import AppKit
 import UsageCore
 import SwiftUI
 
@@ -59,6 +60,11 @@ struct UsageDetailsView: View {
                 Text("The widget connection is unavailable. Restart Usage Rings to try again.")
                     .font(.callout).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
             }
+            Button("Quit Usage Rings") {
+                NSApp.terminate(nil)
+            }
+            .keyboardShortcut("q", modifiers: .command)
+            .help("Quit Usage Rings and stop refreshing usage.")
         }
         .padding(24)
         .frame(maxWidth: .infinity, alignment: .leading)

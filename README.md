@@ -19,10 +19,15 @@ Upgrading from an earlier version also requires this explicit enable action;
 the old on/off preference alone does not authorize the new connection method.
 Keep the app running;
 it refreshes every five minutes and after waking from sleep. Choose
-**Check for Updates…** in the app or menu-bar menu to use the standard Sparkle
+**Check for Updates…** in the app to use the standard Sparkle
 update window. It can download a signed update and relaunch the app to install
 it. Sparkle asks whether to check for updates automatically; enabling usage
 monitoring does not enable that preference. Add the app to Login Items if desired.
+
+Usage Rings runs without a menu-bar icon. Closing its window keeps usage updates
+running. Reopen the installed app or click its widget to view details. Choose
+**Quit Usage Rings** in the app window, or press Command-Q while it is active,
+to stop the app.
 
 Previously published versions do not contain this updater. Install the first
 release that includes it manually once, then use in-app updates for later

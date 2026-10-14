@@ -80,7 +80,7 @@ From a clean committed checkout with macOS 26+ and Xcode:
 
 ```sh
 make check
-APP_VERSION=0.1.5 APP_BUILD=7 make build
+APP_VERSION=0.1.6 APP_BUILD=8 make build
 make package-unnotarized
 ```
 
