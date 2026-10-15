@@ -33,7 +33,7 @@ SOFTWARE.
 ## CodexBar
 
 Cursor and Claude local-session authentication and usage percentage mapping were informed
-by [CodexBar](https://github.com/steipete/CodexBar). The Codex, Cursor, and Claude provider
+by [CodexBar](https://github.com/steipete/CodexBar). The Codex, Cursor, Claude, and Gemini provider
 marks in `Sources/UsageCore/Resources/` are from its
 `Sources/CodexBar/Resources/ProviderIcon-*.svg` files. Product names and marks
 belong to their respective owners; their use does not imply endorsement.

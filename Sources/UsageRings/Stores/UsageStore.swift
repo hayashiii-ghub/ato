@@ -8,11 +8,15 @@ final class UsageStore: ObservableObject {
     private static let preferenceKey = "usageMonitoringEnabled"
     private static let consentKey = "usageMonitoringConsentVersion"
     private static let consentVersion = 1
+    private static let ringOrderKey = "usageRingOrder"
+    private static let preferredPeriodsKey = "usagePreferredPeriods"
     @Published private(set) var snapshot: UsageSnapshot = .empty
     @Published private(set) var isRefreshing = false
     @Published private(set) var sharingError = false
     @Published private(set) var isEnabled: Bool
     @Published private(set) var needsConsent: Bool
+    @Published private(set) var ringOrder: [UsageService]
+    @Published private(set) var preferredPeriods: [UsageService: UsagePeriod]
     private let defaults: UserDefaults
     private let fetch: @Sendable (UsageService) async -> ServiceUsage
     private let onPublish: @MainActor () -> Void
@@ -33,6 +37,14 @@ final class UsageStore: ObservableObject {
         let hasConsent = defaults.integer(forKey: Self.consentKey) == Self.consentVersion
         needsConsent = !hasConsent
         isEnabled = hasConsent && defaults.bool(forKey: Self.preferenceKey)
+        let savedOrder = defaults.stringArray(forKey: Self.ringOrderKey)?.compactMap(UsageService.init(rawValue:))
+        ringOrder = UsageSnapshot.normalizedRingOrder(savedOrder ?? UsageSnapshot.defaultRingOrder)
+        preferredPeriods = (defaults.dictionary(forKey: Self.preferredPeriodsKey) ?? [:]).reduce(into: [:]) { result, entry in
+            guard let service = UsageService(rawValue: entry.key), let rawPeriod = entry.value as? String,
+                  let period = UsagePeriod(rawValue: rawPeriod) else { return }
+            result[service] = period
+        }
+        snapshot = UsageSnapshot(services: applyingPreferredPeriods(to: UsageSnapshot.empty.services), ringOrder: ringOrder)
     }
 
     /// Called only by the explicit enable action beside the connection explanation.
@@ -50,6 +62,52 @@ final class UsageStore: ObservableObject {
         if enabled { start() } else { stop() }
     }
 
+    func selectRing(_ service: UsageService, at index: Int) {
+        guard ringOrder.indices.contains(index) else { return }
+        var order = ringOrder
+        if let previousIndex = order.firstIndex(of: service) {
+            order.swapAt(index, previousIndex)
+        } else {
+            order[index] = service
+        }
+        setRingOrder(order)
+    }
+
+    func moveRing(from index: Int, to destination: Int) {
+        guard ringOrder.indices.contains(index), ringOrder.indices.contains(destination) else { return }
+        var order = ringOrder
+        let service = order.remove(at: index)
+        order.insert(service, at: destination)
+        setRingOrder(order)
+    }
+
+    func setPreferredPeriod(_ period: UsagePeriod?, for service: UsageService) {
+        guard preferredPeriods[service] != period else { return }
+        preferredPeriods[service] = period
+        let saved = Dictionary(uniqueKeysWithValues: preferredPeriods.map { ($0.key.rawValue, $0.value.rawValue) })
+        defaults.set(saved, forKey: Self.preferredPeriodsKey)
+        snapshot = UsageSnapshot(services: applyingPreferredPeriods(to: snapshot.services), ringOrder: ringOrder)
+        publish()
+    }
+
+    private func setRingOrder(_ order: [UsageService]) {
+        let order = UsageSnapshot.normalizedRingOrder(order)
+        guard order != ringOrder else { return }
+        let selectionChanged = Set(order) != Set(ringOrder)
+        if selectionChanged {
+            generation += 1
+            stopPolling()
+        }
+        ringOrder = order
+        defaults.set(order.map(\.rawValue), forKey: Self.ringOrderKey)
+        let readings = UsageService.allCases.map { service in
+            order.contains(service) ? snapshot.usage(for: service) : ServiceUsage(service: service, state: .disabled)
+        }
+        snapshot = UsageSnapshot(services: applyingPreferredPeriods(to: readings), ringOrder: order)
+        publish()
+        if selectionChanged && isEnabled { start() }
+    }
+
     func startIfEnabled() {
         bridge.start(snapshot: { [weak self] in self?.snapshot ?? .empty }, onStateChange: { [weak self] ready in
             self?.sharingError = !ready
@@ -64,18 +122,19 @@ final class UsageStore: ObservableObject {
         defer {
             if generation == requestGeneration { isRefreshing = false }
         }
-        async let codex = fetch(.codex)
-        async let cursor = fetch(.cursor)
-        async let claude = fetch(.claude)
-        async let grokBot = fetch(.grokBot)
-        let readings = await [codex, cursor, claude, grokBot]
+        let selectedServices = ringOrder
+        async let first = fetch(selectedServices[0])
+        async let second = fetch(selectedServices[1])
+        async let third = fetch(selectedServices[2])
+        async let fourth = fetch(selectedServices[3])
+        let readings = await [first, second, third, fourth]
         guard isEnabled, generation == requestGeneration, !Task.isCancelled else { return }
-        snapshot = UsageSnapshot(services: readings.map { reading in
+        snapshot = UsageSnapshot(services: applyingPreferredPeriods(to: readings.map { reading in
             guard reading.state == .unavailable else { return reading }
             var previous = snapshot.usage(for: reading.service)
             previous.state = .unavailable
             return previous
-        })
+        }), ringOrder: ringOrder)
         publish()
     }
 
@@ -95,14 +154,26 @@ final class UsageStore: ObservableObject {
         }
     }
 
-    private func stop() {
+    private func stopPolling() {
         pollingTask?.cancel()
         pollingTask = nil
         isRefreshing = false
         if let wakeObserver { NSWorkspace.shared.notificationCenter.removeObserver(wakeObserver) }
         wakeObserver = nil
-        snapshot = .empty
+    }
+
+    private func stop() {
+        stopPolling()
+        snapshot = UsageSnapshot(services: applyingPreferredPeriods(to: UsageSnapshot.empty.services), ringOrder: ringOrder)
         publish()
+    }
+
+    private func applyingPreferredPeriods(to readings: [ServiceUsage]) -> [ServiceUsage] {
+        readings.map { reading in
+            var reading = reading
+            reading.preferredPeriod = preferredPeriods[reading.service]
+            return reading
+        }
     }
 
     private func publish() {

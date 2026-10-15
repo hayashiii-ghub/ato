@@ -60,18 +60,29 @@ private struct ComparisonSheet: View {
 
 private enum Fixture: String, CaseIterable {
     case normal = "Normal", missing = "Missing", expired = "Expired", high = "High usage / exhausted"
+    case customOrder = "Gemini / custom order / 5-hour selection"
 
     static let now = Date(timeIntervalSince1970: 1_800_000_000)
 
     var snapshot: UsageSnapshot {
         if self == .missing { return .empty }
         let used: [Double] = self == .high ? [80, 90, 100, 95] : [24, 18, 59, 13]
-        return UsageSnapshot(services: zip(UsageService.allCases, used).map { service, percent in
-            ServiceUsage(service: service, state: .ready, windows: [
+        let order: [UsageService] = self == .customOrder
+            ? [.gemini, .grokBot, .codex, .claude] : UsageSnapshot.defaultRingOrder
+        return UsageSnapshot(services: zip(order, used).map { service, percent in
+            let selectsFiveHours = self == .customOrder && service == .gemini
+            var windows = [
                 UsageWindow(id: service == .claude ? "five_hour" : "total", title: "Usage",
-                            usedPercent: percent, resetsAt: nil)
-            ], updatedAt: Self.now.addingTimeInterval(self == .expired ? -UsageSnapshot.maximumAge : 0))
-        })
+                            usedPercent: percent, resetsAt: nil, period: selectsFiveHours ? .fiveHours : nil)
+            ]
+            if selectsFiveHours {
+                windows.append(UsageWindow(id: "gemini-weekly", title: "Week", usedPercent: 80,
+                                           resetsAt: nil, period: .week))
+            }
+            return ServiceUsage(service: service, state: .ready, windows: windows,
+                                updatedAt: Self.now.addingTimeInterval(self == .expired ? -UsageSnapshot.maximumAge : 0),
+                                preferredPeriod: selectsFiveHours ? .fiveHours : nil)
+        }, ringOrder: order)
     }
 }
 

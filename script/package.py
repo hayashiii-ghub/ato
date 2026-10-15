@@ -88,6 +88,7 @@ def inspect_bundle(app, mode):
         "app": (app, app / "Contents/MacOS/UsageRings"),
         "widget": (widget, widget / "Contents/MacOS/UsageRingsWidget"),
         "statusline": (app / "Contents/Helpers/UsageRingsStatusline",) * 2,
+        "cli": (app / "Contents/Helpers/usage-rings",) * 2,
     }
     framework = app / "Contents/Frameworks/Sparkle.framework"
     version = framework / "Versions/Current"
@@ -105,7 +106,7 @@ def inspect_bundle(app, mode):
     rpaths = run("/usr/bin/otool", "-l", str(app / "Contents/MacOS/UsageRings")).stdout
     if "@executable_path/../Frameworks" not in rpaths:
         raise ValueError("The host executable cannot locate embedded Sparkle.framework.")
-    for resource in ("LICENSE", "THIRD_PARTY_NOTICES.md", "AppIcon.icns"):
+    for resource in ("LICENSE", "THIRD_PARTY_NOTICES.md", "AppIcon.icns", "Skills/usage-rings-budget/SKILL.md"):
         if not (app / "Contents/Resources" / resource).is_file():
             raise ValueError(f"Missing bundled resource: {resource}")
     run("/usr/bin/codesign", "--verify", "--deep", "--strict", str(app))

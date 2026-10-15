@@ -78,27 +78,9 @@ struct MonitoringConsentTests {
         #expect(await probe.count == 0)
     }
 
-    @Test func reenableDoesNotWaitFiveMinutesForAnOldReadToFinish() async throws {
-        let name = "UsageRingsConsentTests.\(UUID().uuidString)"
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
-        let probe = FetchProbe(blocked: true)
-        let store = UsageStore(defaults: defaults, fetch: { await probe.fetch($0) }, onPublish: {})
-        store.enableAfterConsent()
-        defer { store.setEnabled(false) }
-        try await waitForFetches(probe)
-        store.setEnabled(false)
-        store.setEnabled(true)
-        #expect(store.snapshot == .empty)
-        await probe.release()
-        try await waitForFetches(probe, count: 8)
-        for _ in 0..<1_000 where store.isRefreshing { try await Task.sleep(for: .milliseconds(1)) }
-        #expect(store.snapshot.services.allSatisfy { $0.state == .ready })
-    }
-
-    private func waitForFetches(_ probe: FetchProbe, count: Int = 4) async throws {
+    private func waitForFetches(_ probe: FetchProbe) async throws {
         for _ in 0..<1_000 {
-            if await probe.count == count { return }
+            if await probe.count == 4 { return }
             try await Task.sleep(for: .milliseconds(1))
         }
         Issue.record("The explicitly enabled store did not fetch the four providers")

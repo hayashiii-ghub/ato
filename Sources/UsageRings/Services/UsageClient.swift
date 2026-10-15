@@ -17,6 +17,8 @@ enum UsageClient {
             switch service {
             case .codex:
                 return await CodexAppServerClient.fetch()
+            case .gemini:
+                return await AntigravityUsageClient.fetch()
             case .cursor:
                 var value = URLRequest(url: URL(string: "https://cursor.com/api/usage-summary")!)
                 value.setValue(try UsageCredentialReader.cursorCookie(), forHTTPHeaderField: "Cookie")
@@ -35,7 +37,7 @@ enum UsageClient {
             }
             let data = try await read(request)
             switch service {
-            case .codex: throw UsageReadError.invalidResponse
+            case .codex, .gemini: throw UsageReadError.invalidResponse
             case .cursor: return try UsageResponseParser.cursor(data)
             case .claude: throw UsageReadError.invalidResponse
             case .grokBot: return try UsageResponseParser.grokBot(data)

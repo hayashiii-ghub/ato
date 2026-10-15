@@ -12,13 +12,15 @@ public enum ClaudeStatusline {
         guard let limits = input.rate_limits, let session = input.session_id, !session.isEmpty,
               let duration = input.cost?.total_api_duration_ms, duration.isFinite, duration > 0 else { return nil }
         var windows: [UsageWindow] = []
-        for (id, title, window) in [("five_hour", "5 hours", limits.five_hour), ("seven_day", "Week", limits.seven_day)] {
+        for (id, period, window) in [("five_hour", UsagePeriod.fiveHours, limits.five_hour),
+                                     ("seven_day", UsagePeriod.week, limits.seven_day)] {
             guard let window else { continue }
             guard window.used_percentage.isFinite, (0...100).contains(window.used_percentage),
                   window.resets_at.isFinite, window.resets_at > 0 else { throw UsageReadError.invalidResponse }
             let reset = Date(timeIntervalSince1970: window.resets_at)
             guard reset > now else { continue }
-            windows.append(UsageWindow(id: id, title: title, usedPercent: window.used_percentage, resetsAt: reset))
+            windows.append(UsageWindow(id: id, title: period.title, usedPercent: window.used_percentage,
+                                       resetsAt: reset, period: period))
         }
         guard !windows.isEmpty else { return nil }
         // Status lines also run for UI events. Only new API activity renews freshness.

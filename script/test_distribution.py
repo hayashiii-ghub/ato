@@ -68,23 +68,26 @@ class PackageTests(unittest.TestCase):
         framework = self.app / "Contents/Frameworks/Sparkle.framework"
         version = framework / "Versions/Current"
         for path in (self.app / "Contents/MacOS/UsageRings", self.widget / "Contents/MacOS/UsageRingsWidget",
-                     self.app / "Contents/Helpers/UsageRingsStatusline", framework / "Sparkle",
+                     self.app / "Contents/Helpers/UsageRingsStatusline", self.app / "Contents/Helpers/usage-rings",
+                     framework / "Sparkle",
                      version / "Autoupdate", version / "Updater.app/Contents/MacOS/Updater",
                      version / "XPCServices/Downloader.xpc/Contents/MacOS/Downloader",
                      version / "XPCServices/Installer.xpc/Contents/MacOS/Installer"):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(b"fixture")
-        for resource in ("LICENSE", "THIRD_PARTY_NOTICES.md", "AppIcon.icns"):
+        for resource in ("LICENSE", "THIRD_PARTY_NOTICES.md", "AppIcon.icns", "Skills/usage-rings-budget/SKILL.md"):
             path = self.app / "Contents/Resources" / resource
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(b"fixture")
         self.details = "Signature=adhoc\nCodeDirectory flags=0x2(adhoc)\nTeamIdentifier=not set\n"
         self.details_overrides = {}
         self.architecture_override = None
+        self.cli_architecture_override = None
         self.sparkle_architecture_override = None
         self.missing_rpath = False
         self.missing_sparkle_link = False
         self.failed_command = None
+        self.failed_signature = None
         self.debug_entitlement = False
         self.mock = patch.object(distribution, "run", side_effect=self.fake_run).start()
         patch.object(distribution, "read_sparkle_configuration", return_value=SPARKLE_CONFIGURATION).start()
@@ -99,10 +102,14 @@ class PackageTests(unittest.TestCase):
     def fake_run(self, *args):
         if self.failed_command and self.failed_command in args:
             raise ValueError("fixture trust check failed")
+        if self.failed_signature == args[-1] and args[0].endswith("codesign") and "--verify" in args:
+            raise ValueError("fixture signature check failed")
         stdout, stderr = "", ""
         if args[0].endswith("lipo"):
             if "Sparkle.framework" in args[-1]:
                 stdout = self.sparkle_architecture_override or "arm64 x86_64"
+            elif args[-1].endswith("/Contents/Helpers/usage-rings"):
+                stdout = self.cli_architecture_override or "arm64"
             else:
                 stdout = self.architecture_override if self.architecture_override and "UsageRingsWidget" in args[-1] else "arm64"
         elif args[0].endswith("otool"):
@@ -128,6 +135,7 @@ class PackageTests(unittest.TestCase):
         self.assertEqual(manifest["distribution"], "draft-unnotarized")
         self.assertEqual(manifest["architectures"], ["arm64"])
         self.assertTrue(all(item["type"] == "ad-hoc" for item in manifest["signatures"].values()))
+        self.assertIn("cli", manifest["signatures"])
         self.assertFalse(any("stapler" in call.args or "--assess" in call.args for call in self.mock.call_args_list))
 
     def test_explicit_unnotarized_mode_preserves_integrity_checks(self):
@@ -173,13 +181,35 @@ class PackageTests(unittest.TestCase):
 
     def test_notarized_packaging_rejects_a_mixed_team_or_unsigned_nested_component(self):
         self.developer_id()
-        helper = str(self.app / "Contents/Helpers/UsageRingsStatusline")
-        self.details_overrides[helper] = "Signature=adhoc\n"
-        with self.assertRaisesRegex(ValueError, "Developer ID"):
-            distribution.inspect_bundle(self.app, "notarized")
-        self.details_overrides[helper] = self.details.replace("TESTTEAM01", "OTHERTEAM1")
-        with self.assertRaisesRegex(ValueError, "same developer team"):
-            distribution.inspect_bundle(self.app, "notarized")
+        for name in ("UsageRingsStatusline", "usage-rings"):
+            helper = str(self.app / "Contents/Helpers" / name)
+            self.details_overrides[helper] = "Signature=adhoc\n"
+            with self.subTest(helper=name, signature="ad-hoc"), self.assertRaisesRegex(ValueError, "Developer ID"):
+                distribution.inspect_bundle(self.app, "notarized")
+            self.details_overrides[helper] = self.details.replace("TESTTEAM01", "OTHERTEAM1")
+            with self.subTest(helper=name, signature="different team"), self.assertRaisesRegex(ValueError, "same developer team"):
+                distribution.inspect_bundle(self.app, "notarized")
+            self.details_overrides.pop(helper)
+
+    def test_requires_bundled_cli(self):
+        (self.app / "Contents/Helpers/usage-rings").unlink()
+        with self.assertRaisesRegex(ValueError, "Missing executable: cli"):
+            distribution.inspect_bundle(self.app, "unnotarized")
+
+    def test_requires_budget_skill(self):
+        (self.app / "Contents/Resources/Skills/usage-rings-budget/SKILL.md").unlink()
+        with self.assertRaisesRegex(ValueError, "Missing bundled resource: Skills/usage-rings-budget/SKILL.md"):
+            distribution.inspect_bundle(self.app, "unnotarized")
+
+    def test_cli_architecture_must_match_the_app(self):
+        self.cli_architecture_override = "x86_64"
+        with self.assertRaisesRegex(ValueError, "architectures differ"):
+            distribution.inspect_bundle(self.app, "unnotarized")
+
+    def test_cli_signature_must_verify(self):
+        self.failed_signature = str(self.app / "Contents/Helpers/usage-rings")
+        with self.assertRaisesRegex(ValueError, "signature check failed"):
+            distribution.inspect_bundle(self.app, "unnotarized")
 
     def test_rejects_mismatched_metadata_dirty_source_and_debug_builds(self):
         for key, value in (("CFBundleVersion", "3"), ("UsageRingsSourceRevision", "b" * 40)):

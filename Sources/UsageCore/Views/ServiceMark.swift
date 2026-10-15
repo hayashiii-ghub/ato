@@ -1,9 +1,11 @@
 import SwiftUI
 
-struct ServiceMark: View {
-    let service: UsageService
+public struct ServiceMark: View {
+    public let service: UsageService
 
-    var body: some View {
+    public init(service: UsageService) { self.service = service }
+
+    public var body: some View {
         Image(nsImage: mark)
             .renderingMode(.template)
             .resizable()

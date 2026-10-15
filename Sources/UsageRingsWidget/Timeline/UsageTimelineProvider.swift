@@ -11,7 +11,10 @@ struct UsageTimelineProvider: TimelineProvider {
 
     func getSnapshot(in context: Context, completion: @escaping (UsageEntry) -> Void) {
         if context.isPreview { completion(sample()); return }
-        Task { completion(UsageEntry(date: Date(), snapshot: await WidgetSnapshotReader.load())) }
+        Task {
+            let snapshot = await WidgetSnapshotReader.load()
+            completion(UsageEntry(date: Date(), snapshot: snapshot))
+        }
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<UsageEntry>) -> Void) {

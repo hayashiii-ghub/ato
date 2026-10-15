@@ -1,219 +1,156 @@
 # Usage Rings
 
-Personal macOS widget for remaining Codex, Claude, Cursor, and Grok Bot usage.
-Requires macOS 26+; Xcode is only needed to build from source. This is independent of cc:.
+A macOS widget for remaining Codex, Claude, Cursor, Grok, and Gemini usage.
+Requires **macOS 26+ and Apple silicon**. Xcode is needed only to build from source.
+This is independent of cc: and the usage providers.
+
+Gemini, ring editing and period selection, and the CLI/skill currently require a
+source/local build; these changes are not yet in the published download.
 
 ## Install or update
 
-Download the latest [DMG](https://github.com/hayashiii-ghub/usage-rings/releases/latest/download/usage-rings-macos.dmg)
-or browse [GitHub Releases](https://github.com/hayashiii-ghub/usage-rings/releases).
-Requires **macOS 26+ and Apple silicon**; Xcode is not needed to use the download.
+1. Download the latest [DMG](https://github.com/hayashiii-ghub/usage-rings/releases/latest/download/usage-rings-macos.dmg)
+   or ZIP from [GitHub Releases](https://github.com/hayashiii-ghub/usage-rings/releases).
+2. Quit Usage Rings and drag the app into Applications. Replace the existing copy
+   in its current location, including `~/Applications` if used; avoid duplicate installations.
+3. Open the app, read the connection explanation, and choose **Enable AI usage**.
+4. Right-click the desktop → **Edit Widgets** → **Usage Rings → AI Usage**.
 
-Open the DMG, quit any running Usage Rings, and drag the app to Applications.
-When updating, replace the existing copy in its current location instead of
-installing a second copy. Open the installed app, then right-click the desktop,
-choose **Edit Widgets**, and add **Usage Rings → AI Usage**. Read the connection
-explanation and choose **Enable AI usage** when you want to connect. First launch
-does not read account credentials, start Codex, or contact usage providers.
-Upgrading from an earlier version also requires this explicit enable action;
-the old on/off preference alone does not authorize the new connection method.
-Keep the app running;
-it refreshes every five minutes and after waking from sleep. Choose
-**Check for Updates…** in the app to use the standard Sparkle
-update window. It can download a signed update and relaunch the app to install
-it. Sparkle asks whether to check for updates automatically; enabling usage
-monitoring does not enable that preference. Add the app to Login Items if desired.
+The download is ad-hoc signed and **not notarized by Apple**. If macOS blocks first
+launch and you trust the source, follow Apple's [per-app approval instructions](https://support.apple.com/102445)
+in **System Settings → Privacy & Security → Open Anyway**. Do not disable Gatekeeper
+or remove quarantine. Fresh installation and first-launch approval on a separate
+Mac have not been verified.
 
-Usage Rings runs without a menu-bar icon. Closing its window keeps usage updates
-running. Reopen the installed app or click its widget to view details. Choose
-**Quit Usage Rings** in the app window, or press Command-Q while it is active,
-to stop the app.
+For checksum verification, download all five assets from the same release:
+`usage-rings-macos.dmg`, `usage-rings-macos.zip`, `appcast.xml`,
+`usage-rings-macos.json`, and `usage-rings-macos.sha256`. Run
+`shasum -a 256 -c usage-rings-macos.sha256` in that folder. The JSON records the
+source commit and build details. Checksums detect mismatches; they do not establish Apple approval.
 
-Previously published versions do not contain this updater. Install the first
-release that includes it manually once, then use in-app updates for later
-releases. The updater requires a published signed update feed; see
-[Distribution](DISTRIBUTION.md#in-app-updates) for release preparation.
+Use **Check for Updates…** for Sparkle's signed download and relaunch flow.
+Automatic update checks have their own preference, separate from usage monitoring.
+Versions without Sparkle need one manual update first.
 
-The app is **not notarized by Apple**. macOS may block the first launch. If you
-trust the source, follow Apple's [per-app approval instructions](https://support.apple.com/102445)
-under **System Settings → Privacy & Security → Open Anyway**. See
-[DISTRIBUTION.md](DISTRIBUTION.md) for checksums, installation limits, and optional
-Claude Code status-line setup. The download does not change that setup automatically.
+## Use
 
-To build and install from source instead, use `make install` with Xcode installed.
-It installs to `~/Applications` and connects Claude Code's status line when no
-custom command exists. Existing custom commands are preserved and must be composed
-manually. Paid Apple Developer membership is not required.
+Keep the app running; it refreshes every five minutes and after waking. There is
+no menu-bar icon. Closing the window keeps monitoring active; reopen the app or
+click the widget for details. **Quit Usage Rings** or Command-Q stops the app.
+Add it to macOS Login Items if desired.
 
-## Distribution
+Click a ring to select its service; drag to reorder or use the picker's left/right
+buttons. Selecting an existing service swaps positions. Only the four selected
+services are monitored; the defaults are Codex, Claude, Cursor, and Grok.
 
-`make package-unnotarized` produces the DMG, ZIP, Sparkle appcast with the ZIP’s signature, build
-manifest, and checksums for this release route. `make package-draft` creates a review ZIP. The optional
-`make package` command requires Developer ID signing and notarization; those are
-not part of the current release plan. See [DISTRIBUTION.md](DISTRIBUTION.md).
+Choose **Auto**, **5 hours**, or **Week** in the picker. Auto uses the lowest
+remaining main window. Service order and period choices are saved and shared with
+the widget; changing the display period does not refresh usage. Missing, failed,
+expired, or over-20-minute-old readings show **—**. Small widgets use a 2 × 2 grid;
+medium widgets also show percentages. macOS controls widget refresh timing.
 
 ## Accounts
 
-The app uses sign-ins already stored on this Mac after you explicitly enable it.
-Turn off **Show AI usage** to stop polling. After you have accepted the current
-connection explanation, that choice is remembered across launches; an off choice
-also stays off. The app never starts a new login for you.
+Install and sign in to the relevant apps or CLIs separately. Usage Rings starts
+no login flow. Gemini here means **Antigravity CLI**, not Gemini CLI or the Gemini web app.
 
-| Provider | Local sign-in | Ring |
+| Provider | Required local sign-in | Allowance |
 | --- | --- | --- |
-| Codex | Codex CLI 0.160.1+ signed in with ChatGPT | Lowest remaining main window |
-| Cursor | Cursor desktop session | Reported monthly plan percentage |
-| Claude | Claude Code status-line output (v2.1.251+, Pro/Max) | Lowest remaining 5-hour / weekly window |
-| Grok Bot | Same Cursor desktop account used by Grok Bot | Weekly allowance |
+| Codex | Codex CLI 0.160.1+ with ChatGPT; the desktop app alone is insufficient | Reported main windows |
+| Claude | Claude Code 2.1.251+ with Pro/Max and optional status-line setup below | 5-hour / weekly |
+| Cursor | Cursor desktop session | Monthly plan percentage |
+| Grok | Cursor desktop account used by Grok | Weekly |
+| Gemini | Antigravity CLI 1.1.11+ (`agy`) with Google | Gemini 5-hour / weekly |
 
-Codex uses the official local [Codex App Server](https://learn.chatgpt.com/docs/app-server#authentication-endpoints)
-over stdio, with `account/rateLimits/read` and `account/rateLimits/updated`. Install
-the official Codex CLI separately and sign in with ChatGPT using its normal login
-flow. A Codex desktop app alone is not a supported substitute for that CLI.
-The app checks fixed CLI locations: `/opt/homebrew/bin/codex`,
-`/usr/local/bin/codex`, and `~/.local/bin/codex`; it does not execute a shell or
-search arbitrary shell paths. Version 0.160.1 is the verified minimum.
-Usage Rings does not directly read Codex's auth file or send Codex credentials to
-an internal HTTP endpoint, and does not fall back to the old method. Missing or
-unsupported CLIs show setup guidance; missing ChatGPT sign-in shows sign-in guidance.
-The official CLI owns its existing login, and may refresh it or write its local
-cache/state as part of its normal operation. Usage Rings does not request login,
-logout, account changes, agent turns, or tool execution.
+API-key billing and pooled Grok enterprise quotas are unsupported. Extra spending
+allowances are not substituted for included quota.
 
-Cursor and Grok Bot still use internal endpoints, so provider changes may require
-updates. Their tokens are not refreshed by Usage Rings. API-key billing accounts
-and pooled Grok Bot enterprise quotas are unsupported.
+### Optional Claude Code status line
 
-Claude uses the official [status-line output](https://code.claude.com/docs/en/statusline#rate-limit-usage).
-Use Claude Code once after connecting; usage appears after an API response. The helper
-stores only the two main usage windows, receipt time, and hashed response markers under
-`~/Library/Caches/Usage Rings/`. It does not store the session payload, conversation paths,
-or workspace metadata. Usage Rings reads no Claude credentials or Keychain items and
-makes no Claude API requests. Repeated status-line UI events do not refresh the age of
-an old reading. Without new Claude Code activity, the ring becomes unavailable after
-20 minutes or when a reported reset passes. App refresh reads the cache every five minutes;
-use **Refresh** to pick it up immediately.
+Downloading or moving the app does not change Claude settings. To connect it,
+merge this property into `~/.claude/settings.json` (or `$CLAUDE_CONFIG_DIR/settings.json`).
+Preserve other settings; compose an existing custom `statusLine` instead of replacing it.
 
-To disconnect only this integration while keeping other Claude settings:
-
-```sh
-python3 script/claude-statusline-setup.py --uninstall
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "\"/Applications/Usage Rings.app/Contents/Helpers/UsageRingsStatusline\""
+  }
+}
 ```
 
-Login credentials stay out of the repository, logs, and widget data. Usage requests go to the matching provider endpoints. Update checks and downloads
-use the GitHub release feed; Sparkle verifies downloaded archives before installing. The sandboxed widget reads sanitized values
-from the loopback-only `127.0.0.1:52388/v1/usage` bridge, then caches them in its own
-container. Other local processes can read those usage values; there is no LAN listener.
+For `~/Applications`, replace `/Applications` in the command with `$HOME/Applications`.
+Use Claude Code once; usage arrives after an API response. To disconnect a manual
+setup, remove only this helper invocation, keeping any composed custom command.
+For a source-installer setup, use `python3 script/claude-statusline-setup.py --uninstall`;
+that command recognizes only the form written by the installer.
 
-macOS controls widget updates. Missing/failed readings, values older than 20 minutes,
-and passed reset times display **—** until a new reading arrives. Extra spending
-allowances are not substituted for included quota percentages.
+## CLI and AI skill
 
-The small widget uses a 2 × 2 grid of rings without percentage labels; VoiceOver
-still reads each provider's remaining percentage. Missing or expired readings
-show a **—** badge on the small ring. The medium widget keeps percentages below
-the rings.
+The app includes a read-only CLI and the [usage-rings-budget skill](Skills/usage-rings-budget/SKILL.md):
+
+```sh
+"$HOME/Applications/Usage Rings.app/Contents/Helpers/usage-rings" status --json --provider codex
+```
+
+Use `/Applications/Usage Rings.app` when installed there. Provider names are
+`codex`, `claude`, `cursor`, `grok`, and `gemini`; omit `--provider` for all services,
+omit `--json` for readable text, or use `--help`.
+
+The CLI reads the running app's snapshot, with all reported windows independent
+of the ring's display period. It does not refresh, launch the app, sign in, or
+change settings. Schema version `1` includes remaining percentages, observation/reset
+times, and validity; unknown or expired values are `null`. Exit `0` means the read
+succeeded even if readings are stale or disabled; `1` means no valid snapshot;
+`2` means invalid arguments.
+
+`alerts` contains fresh main windows strictly below **20%**. Add `--threshold 10`
+for a different threshold on that call. Alerts include time until reset; the CLI
+saves no notice history. The skill asks how to continue and follows your answer,
+without automatically splitting or stopping tasks. Say “tell me at 10%” to change
+its threshold for the conversation. It checks only before work and at natural
+pauses; it has no background monitor. Percentages cannot predict exact tasks or tokens.
+
+The bundled skill is at `Contents/Resources/Skills/usage-rings-budget/SKILL.md`.
+Ask your assistant to read it or copy its folder into the assistant's skill directory.
+App installation does not add it to assistant settings or change shell PATH.
 
 ## Security and data FAQ
 
-### Does Usage Rings send data to its developer?
+**What is read or sent?** After explicit enablement, Codex uses the official
+[local App Server](https://learn.chatgpt.com/docs/app-server#authentication-endpoints)
+and Gemini uses Antigravity CLI's read-only quota command. Those CLIs manage their
+existing authentication and may update their own local state. Usage Rings reads
+Cursor's session database read-only for Cursor/Grok HTTPS requests to `cursor.com`
+and `api2.cursor.sh`; credentials stay in memory and redirects are rejected.
+Claude uses official [status-line output](https://code.claude.com/docs/en/statusline#rate-limit-usage),
+without reading Claude credentials or making Claude API requests. The app does not
+read conversation files, collect analytics, or send usage to its developer.
+Cursor/Grok endpoints are internal; their compatibility or permitted use may change.
 
-No. The app has no developer-operated collection server or analytics. After
-explicit enablement, Codex usage comes from the official local Codex CLI App
-Server, which handles communication with OpenAI. Cursor and Grok Bot use
-authenticated HTTPS requests to `cursor.com` and `api2.cursor.sh` respectively,
-using the local Cursor session. These requests contain the credentials required
-by that service; redirects are rejected. Claude usage is read locally from
-official Claude Code status-line output; Usage Rings makes no Claude API requests.
-Update checks and downloads contact GitHub separately from usage monitoring.
-Sparkle manages its own update-check preference; it does not send provider credentials
-or usage readings with these requests.
+**What is stored or exposed?** Only provider status, percentages, observation/reset
+times, and display choices are shared over `127.0.0.1:52388/v1/usage`. Other local
+processes can read this bridge; its header is not authentication. It has no LAN
+listener or credential endpoints. The widget keeps a cache in its own container.
+Claude's separate helper stores the two main windows and hashed response markers
+in `~/Library/Caches/Usage Rings/`, not full input or conversation/workspace paths.
+Cache files use owner-only permissions; there is no usage history or cloud sync.
+Passing CLI output to an AI shares these usage values with that conversation service.
+Update checks contact GitHub separately and do not include provider credentials or usage.
 
-### Does it read my login details or conversations?
+**What happens when monitoring is off?** Before consent, including upgrades from
+a pre-consent version, the app does not read provider data or start provider CLIs.
+Turning off **Show AI usage** stops future polling and clears current display data. An in-flight
+request can still finish, and macOS may retain the widget's cached display until
+its next update. The optional Claude helper remains connected until separately removed.
+A reset or stale reading never implies a restored allowance; use a fresh reading.
 
-For Codex, the app asks the official CLI for account mode and rate limits over
-local stdio; it does not directly read Codex credentials. The CLI manages its
-existing login and can refresh its authentication and write cache/state/log files.
-Usage Rings never invokes login or logout; it does not create a new sign-in.
-For Cursor and Grok Bot, it reads Cursor's local session database in read-only mode. These
-credentials are used in memory for the matching service's request and are not
-copied into the widget cache or logs. Usage Rings does not refresh Cursor tokens
-or change your accounts. It does not read Claude credentials, Keychain items, or conversation
-files. The optional Claude helper receives status-line input, but saves only the
-two main usage windows, receipt time, and hashed response markers—not the full
-input, conversation paths, or workspace metadata.
+## Build from source
 
-### What is saved, and who can see it?
+With Xcode installed, run `make check`, then `make install`. It installs into
+`~/Applications` and connects Claude's helper if no custom command exists; an
+existing custom status line is preserved. For updates, choose version/build
+metadata as described in [AGENTS.md](AGENTS.md), which also covers checks and packaging.
 
-Usage Rings itself caches display data on this Mac: provider status, usage percentages,
-reset times, and update times. Claude's helper saves its separate local cache
-under `~/Library/Caches/Usage Rings/`. Cache files use owner-only permissions.
-There is no Usage Rings usage-history database or cloud sync. The separate Codex
-CLI can maintain its own local state, cache, and logs.
-
-The app shares display data with the widget over `127.0.0.1:52388`, which is
-accessible only on this Mac, not over the LAN. It does not expose credentials.
-Other processes on the same Mac can read this bridge; its request header is not
-authentication, and it is not a security boundary against other local apps.
-
-### What happens when I turn off Show AI usage?
-
-Before initial enablement (including migration from an older version), the host
-app does not read provider credentials or the Claude usage cache, start Codex,
-or contact usage providers. The local widget bridge returns empty display data.
-macOS may briefly retain the widget's previously cached display until it updates.
-
-Turning off **Show AI usage** stops scheduled polling and wake refreshes, clears
-its current display data, and asks macOS to refresh the widget. It does not delete your sign-ins or
-guarantee that an already-started request stops immediately. The local bridge
-remains running with empty data, and the widget may retain its cache until macOS
-updates it. Turning this setting off does not disconnect the optional Claude
-status-line helper; use the disconnect command above to stop that integration.
-
-### Is this an official integration, and are the numbers always current?
-
-Usage Rings is an independent project, not endorsed by the providers. Codex uses
-documented official App Server rate-limit operations; Claude uses documented
-status-line output. Cursor and Grok Bot still use internal endpoints whose
-compatibility or permitted use may change; provider approval is not established.
-The app normally refreshes every five minutes, and macOS
-controls widget updates. Missing or failed readings, readings older than 20
-minutes, and passed reset times show **—** instead of an invented percentage.
-
-### Why does macOS show a warning when opening the download?
-
-The current download is not notarized by Apple and is not distributed through the
-App Store. Download from this repository's Releases page and check the published
-checksums. Checksums help detect a mismatched download; they do not establish
-Apple approval or prove the app is safe. If you trust the source, follow Apple's
-per-app approval instructions linked above. Never disable Gatekeeper globally.
-
-## Development
-
-```sh
-make check   # parser, credential, snapshot, and bridge tests
-make build   # build and verify signed app + widget bundles
-make run     # run from dist without installing
-swift run WidgetPreview dist/widget-preview.png # synthetic small/medium, light/dark fixture sheet
-swift run WidgetPreview dist/widget-comparison.png dist/widget-before.png # compare with a saved baseline
-```
-
-`WidgetPreview` renders the production SwiftUI rings without starting the app,
-reading credentials, contacting providers, or changing installed widgets. It
-covers normal, missing, expired, and high/exhausted usage. The sheet uses fixed
-170 × 170 and 360 × 170 point canvases; it does not emulate WidgetKit's desktop
-compositing or the system's widget update scheduling.
-
-### Source layout
-
-- `Sources/UsageRings`: app entry point, `Views`, `Stores`, `Services`, and window `Support`.
-- `Sources/UsageCore/Models`: shared usage values and freshness rules.
-- `Sources/UsageCore/Parsing`: provider responses and official Claude status-line input.
-- `Sources/UsageCore/Persistence`: sanitized snapshot and Claude status-line caches.
-- `Sources/UsageCore/Views`: shared ring composition and provider marks; SVG assets stay in `Resources`.
-- `Sources/UsageRingsWidget/Timeline`: timeline entries, preview data, and expiry scheduling.
-- `Sources/UsageRingsWidget/Views`: WidgetKit view configuration; the snapshot reader stays at the target root.
-- `Tools/WidgetPreview`: offline visual fixture renderer, excluded from the installed app bundle.
-
-The Grok Bot mark is a transparent monochrome character glyph sized to match the
-other provider marks. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for sources.
+Provider marks and dependency licenses are documented in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

@@ -13,15 +13,18 @@ public enum UsageResponseParser {
         let windows = try pairs.compactMap { id, raw -> UsageWindow? in
             guard let raw else { return nil }
             let title: String
+            let period: UsagePeriod?
             switch raw.windowDurationMins {
-            case 300: title = "5 hours"
-            case 10_080: title = "Week"
-            case let minutes? where minutes > 0 && minutes % 1_440 == 0: title = "\(minutes / 1_440) days"
-            case let minutes? where minutes > 0 && minutes % 60 == 0: title = "\(minutes / 60) hours"
-            default: title = id == "primary" ? "Current window" : "Other window"
+            case 300: title = UsagePeriod.fiveHours.title; period = .fiveHours
+            case 10_080: title = UsagePeriod.week.title; period = .week
+            case let minutes? where minutes > 0 && minutes % 1_440 == 0:
+                title = "\(minutes / 1_440) days"; period = nil
+            case let minutes? where minutes > 0 && minutes % 60 == 0:
+                title = "\(minutes / 60) hours"; period = nil
+            default: title = id == "primary" ? "Current window" : "Other window"; period = nil
             }
             return UsageWindow(id: id, title: title, usedPercent: try percent(raw.usedPercent),
-                               resetsAt: raw.resetsAt.map { Date(timeIntervalSince1970: TimeInterval($0)) })
+                               resetsAt: raw.resetsAt.map { Date(timeIntervalSince1970: TimeInterval($0)) }, period: period)
         }
         guard !windows.isEmpty else { throw UsageReadError.invalidResponse }
         return ServiceUsage(service: .codex, state: .ready, windows: windows, updatedAt: now)
@@ -48,7 +51,7 @@ public enum UsageResponseParser {
               let used = response.usagePercent,
               let timestamp = response.nextResetTimestampUtc,
               let reset = parseDate(timestamp) else { throw UsageReadError.invalidResponse }
-        let window = UsageWindow(id: "week", title: "Week", usedPercent: try percent(used), resetsAt: reset)
+        let window = UsageWindow(id: "week", title: "Week", usedPercent: try percent(used), resetsAt: reset, period: .week)
         return ServiceUsage(service: .grokBot, state: .ready, windows: [window], updatedAt: now)
     }
 
