@@ -107,10 +107,11 @@ succeeded even if readings are stale or disabled; `1` means no valid snapshot;
 
 `alerts` contains fresh main windows strictly below **20%**. Add `--threshold 10`
 for a different threshold on that call. Alerts include time until reset; the CLI
-saves no notice history. The skill asks how to continue and follows your answer,
-without automatically splitting or stopping tasks. Say “tell me at 10%” to change
-its threshold for the conversation. It checks only before work and at natural
-pauses; it has no background monitor. Percentages cannot predict exact tasks or tokens.
+saves no notice history. The skill gives the agent remaining-usage and reset-time
+notices at **20%, 10%, and 5%**, once per stage within each reset window. These are
+working context, not user confirmation prompts or automatic changes to the task.
+It checks only before work and at natural pauses; it has no background monitor.
+Percentages cannot predict exact tasks or tokens.
 
 The bundled skill is at `Contents/Resources/Skills/usage-rings-budget/SKILL.md`.
 Ask your assistant to read it or copy its folder into the assistant's skill directory.

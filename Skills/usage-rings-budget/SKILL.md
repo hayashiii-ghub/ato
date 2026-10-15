@@ -1,12 +1,12 @@
 ---
 name: usage-rings-budget
-description: Check remaining AI usage through Usage Rings on macOS and ask the user how to continue when a main allowance drops below a configurable threshold, 20% by default. Use when the user wants low-usage notices with the time until reset.
+description: Give the working agent remaining-usage notices at 20%, 10%, and 5%, with time until reset, through Usage Rings on macOS. Use when the user wants the agent to stay aware of its account allowance while working.
 ---
 
 # Usage Rings budget
 
-Report low usage and let the user decide how to continue. Do not automatically
-split, reduce, stop, or switch the task based on the percentage.
+Give the agent usage awareness while it continues the authorized task. A low-usage
+notice does not require a user reply or automatically split, stop, or switch work.
 
 ## Check usage
 
@@ -23,11 +23,6 @@ use the known installation when both exist. For example, for a Codex task:
 "$HOME/Applications/Usage Rings.app/Contents/Helpers/usage-rings" status --json --provider codex
 ```
 
-The threshold defaults to **20%**. When the user says, for example, "tell me at
-10%", add `--threshold 10` to subsequent calls. Remember that choice in the
-conversation. The CLI accepts percentages greater than 0 and up to 100 and does
-not save settings. A value exactly equal to the threshold is not below it.
-
 Read once when beginning substantial work and again at natural pauses before
 continuing. The command reads the running app's snapshot without refreshing
 providers or changing settings. Observations usually update every five minutes;
@@ -35,35 +30,35 @@ do not poll repeatedly or treat an unchanged `observedAt` as a new reading.
 This skill has no background process and cannot interrupt an AI that has not
 called the CLI.
 
-## Ask when usage is low
+## Notice the 20%, 10%, and 5% stages
 
-For JSON schema version `1`, use `alerts`. Each entry identifies a fresh main
-window below the threshold, independently of the ring's displayed period.
+For JSON schema version `1`, use `alerts` with the CLI's default 20% threshold.
+Each entry identifies a fresh main window below 20%, independently of the ring's displayed period.
 It includes the remaining percentage, observation time, reset time, and
 `secondsUntilReset`. An alert can exist while another window is unknown.
 
-When an alert first appears, briefly give the provider, window, remaining
-percentage, and time until reset in hours/days appropriate to its length. Include
-the observation time if it is old enough to affect the decision. For example:
+Choose the lowest stage strictly above `remainingPercent`: below 20%, below 10%,
+or below 5%. Equality does not count as below. Remember the lowest stage already
+noticed for each provider, window, and reset boundary in this conversation.
+Notice it once, then again only when a lower stage is reached or the reset boundary
+changes. A reading that rises and falls within the same reset window does not
+repeat an earlier stage. If the first reading is 4%, or a reading jumps from 25%
+to 4%, use only the 5% stage; do not queue all three notices. Zero stays in the 5% stage.
 
-> Codexの週枠が残り18%です。リセットまであと2日6時間あります。
-> このまま続けますか、それとも一区切りにしますか？
+For a new stage, retain a short working-context notice with the provider, window,
+remaining percentage, and time until reset in appropriate hours/days. For example:
 
-Use the available user-input mechanism and let the answer determine the next
-substantial work. The choices may be to continue, finish the current piece, or
-pause. Do not silently choose one. If the user already gave a standing preference,
-follow it. If they pause, leave a short handoff in the conversation; do not create
-extra planning documents or schedule a restart.
+> Codex / Week: 8% remaining; reset in 2d 6h (below 10%).
 
-Avoid repeating the same question for the same provider, window, reset boundary,
-and threshold once the user has answered. Reconsider when the reset boundary or
-threshold changes, or the allowance reaches 0%. The CLI is stateless: it reports
-current low windows, not evidence that a threshold was crossed since its last call.
+This is context for the agent, not a routine user-facing alert or approval request.
+Continue the task; tell the user only if they ask or the usage affects delivery.
+The CLI is stateless and reports current low windows; stage tracking belongs to
+the conversation, not a settings file or background process.
 
 An empty `alerts` array does not guarantee available quota. Check service/window
-states: `null`, stale, disabled, or unavailable readings are unknown. Mention an
-unavailable reading once and continue the original task unless the user required
-a verified budget. Do not enable accounts or retry in a loop. Exit `1` means the
+states: `null`, stale, disabled, or unavailable readings are unknown. Do not emit a
+low-usage stage from an unknown reading. Continue the original task unless the user
+required a verified budget. Do not enable accounts or retry in a loop. Exit `1` means the
 snapshot was unavailable/invalid; exit `2` means invalid arguments. After a reset
 or `validUntil`, get a new reading instead of assuming the allowance is full.
 Use the actual read time for reset countdowns and say "unknown" for a missing reset.
