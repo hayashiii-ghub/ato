@@ -151,6 +151,13 @@ class PackageTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Unknown distribution mode"):
             distribution.inspect_bundle(self.app, "automatic")
 
+    def test_runtime_is_reported_with_combined_signature_flags(self):
+        for flags, expected in (("adhoc,runtime", True), ("runtime,adhoc", True), ("adhoc", False)):
+            self.details = f"Signature=adhoc\nCodeDirectory flags=0x10002({flags})\n"
+            with self.subTest(flags=flags):
+                manifest = distribution.inspect_bundle(self.app, "unnotarized")
+                self.assertTrue(all(item["hardened_runtime"] == expected for item in manifest["signatures"].values()))
+
     def test_notarized_packaging_rejects_ad_hoc(self):
         with self.assertRaisesRegex(ValueError, "Developer ID"):
             distribution.inspect_bundle(self.app, "notarized")

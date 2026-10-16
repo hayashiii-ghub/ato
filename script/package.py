@@ -131,9 +131,10 @@ def inspect_bundle(app, mode):
         run("/usr/bin/codesign", "--verify", "--strict", str(code))
         details = run("/usr/bin/codesign", "-d", "--verbose=4", str(code)).stderr
         developer_id = "Authority=Developer ID Application:" in details
+        flags = re.search(r"\bflags=0x[0-9a-fA-F]+\(([^)]*)\)", details)
         signature = {
             "type": "developer-id" if developer_id else "ad-hoc" if "Signature=adhoc" in details else "other",
-            "hardened_runtime": "(runtime)" in details,
+            "hardened_runtime": bool(flags and "runtime" in flags.group(1).split(",")),
             "secure_timestamp": bool(re.search(r"^Timestamp=.+", details, re.MULTILINE)),
         }
         signatures[name] = signature
