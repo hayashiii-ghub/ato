@@ -13,34 +13,26 @@ private final class UsageSessionDelegate: NSObject, URLSessionTaskDelegate, @unc
 enum UsageClient {
     static func fetch(_ service: UsageService) async -> ServiceUsage {
         do {
-            let request: URLRequest
             switch service {
             case .codex:
                 return await CodexAppServerClient.fetch()
             case .gemini:
                 return await AntigravityUsageClient.fetch()
             case .cursor:
-                var value = URLRequest(url: URL(string: "https://cursor.com/api/usage-summary")!)
-                value.setValue(try UsageCredentialReader.cursorCookie(), forHTTPHeaderField: "Cookie")
-                value.setValue("https://cursor.com", forHTTPHeaderField: "Origin")
-                request = value
+                var request = URLRequest(url: URL(string: "https://cursor.com/api/usage-summary")!)
+                request.setValue(try UsageCredentialReader.cursorCookie(), forHTTPHeaderField: "Cookie")
+                request.setValue("https://cursor.com", forHTTPHeaderField: "Origin")
+                return try UsageResponseParser.cursor(await read(request))
             case .claude:
                 return ClaudeStatuslineFile.read()?.usage ?? ServiceUsage(service: .claude, state: .signInRequired)
             case .grokBot:
-                var value = URLRequest(url: URL(string: "https://api2.cursor.sh/aiserver.v1.DashboardService/GetSandUsageStatus")!)
-                value.httpMethod = "POST"
-                value.httpBody = Data("{}".utf8)
-                value.setValue("application/json", forHTTPHeaderField: "Content-Type")
-                value.setValue("1", forHTTPHeaderField: "Connect-Protocol-Version")
-                value.setValue("Bearer \(try UsageCredentialReader.cursorToken())", forHTTPHeaderField: "Authorization")
-                request = value
-            }
-            let data = try await read(request)
-            switch service {
-            case .codex, .gemini: throw UsageReadError.invalidResponse
-            case .cursor: return try UsageResponseParser.cursor(data)
-            case .claude: throw UsageReadError.invalidResponse
-            case .grokBot: return try UsageResponseParser.grokBot(data)
+                var request = URLRequest(url: URL(string: "https://api2.cursor.sh/aiserver.v1.DashboardService/GetSandUsageStatus")!)
+                request.httpMethod = "POST"
+                request.httpBody = Data("{}".utf8)
+                request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                request.setValue("1", forHTTPHeaderField: "Connect-Protocol-Version")
+                request.setValue("Bearer \(try UsageCredentialReader.cursorToken())", forHTTPHeaderField: "Authorization")
+                return try UsageResponseParser.grokBot(await read(request))
             }
         } catch UsageReadError.missingSession, UsageReadError.expiredSession {
             return ServiceUsage(service: service, state: .signInRequired)

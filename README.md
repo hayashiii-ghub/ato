@@ -93,3 +93,20 @@ This builds/verifies, replaces `~/Applications/Usage Rings.app`, restarts its wi
 and opens the app. Custom Claude status lines are preserved. Development and
 release instructions: [AGENTS.md](AGENTS.md). Licenses: [LICENSE](LICENSE) and
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+## Website
+
+The [public website](https://usage-rings.hayashiii-gpt.chatgpt.site) is hosted on Sites.
+Its source lives in [`site/`](site), using Bun and TypeScript with static HTML/CSS.
+Python is used only by the app's setup, packaging, and tests.
+
+```sh
+cd site
+bun install --frozen-lockfile
+bun run dev
+```
+
+From the repository root, `make site-check` checks types and `make site-build`
+generates `site/dist/` for static hosting. Edit `site/src/` and `site/public/`;
+the generated `dist/` is not tracked. Website commands are separate from the
+Swift app's build and installation commands.

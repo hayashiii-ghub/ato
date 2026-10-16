@@ -1,0 +1,16 @@
+{
+  "name": "usage-rings-site",
+  "private": true,
+  "type": "module",
+  "packageManager": "bun@1.4.2",
+  "scripts": {
+    "dev": "bun --hot scripts/dev.ts",
+    "preview": "bun scripts/dev.ts --preview",
+    "check": "tsc --noEmit",
+    "build": "bun scripts/build.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.3",
+    "typescript": "7.0.2"
+  }
+}

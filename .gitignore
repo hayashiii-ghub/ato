@@ -5,3 +5,5 @@ dist/
 *.xcuserdata/
 secrets/
 .env
+site/node_modules/
+site/.sites-runtime/

@@ -15,6 +15,9 @@ ask before adding other documentation. Keep the app independent of cc:.
   fallbacks. Never expose credentials/private keys in logs, caches, or assets.
 - Unknown, failed, expired, or 20-minute-old usage is unavailable. Preserve actual
   observation times; never infer a restored allowance. Keep README's security FAQ anchor.
+- `site/` owns the website's Bun/TypeScript source and static assets. Edit `src/`
+  and `public/`, not generated `dist/`. Keep its existing Sites project ID and
+  keep public feature claims aligned with the published app release.
 
 ## Validate
 
@@ -23,6 +26,10 @@ Use `x.y.z` and build 1–9999; increase the installed/published build and never
 its version. Unspecified development defaults are 0.1.0/build 1. `SOURCE_REVISION`
 must match full HEAD; dirty builds are marked. `make run` builds/opens;
 `make install` follows [README](README.md#build-from-source).
+
+For website changes, install with `cd site && bun install --frozen-lockfile`, then
+run `make site-check` and `make site-build` from the repository root. Verify the
+language switch, demo controls, and desktop/mobile layout when changing the browser code.
 
 `swift run WidgetPreview dist/widget-preview.png` renders synthetic small/medium,
 light/dark fixtures; a second image argument adds comparison. It does not verify
