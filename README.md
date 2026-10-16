@@ -1,8 +1,6 @@
 # Usage Rings
 
 Remaining Codex, Claude, Cursor, Grok, and Gemini usage on **macOS 26+ / Apple silicon**.
-Gemini, ring/period editing, the CLI/skill, and quit-only monitoring currently require
-this source build; they are not yet in the published download.
 
 ## Install and use
 
