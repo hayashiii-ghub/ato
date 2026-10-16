@@ -12,6 +12,25 @@ public struct UsageRingsView: View {
     }
 
     public var body: some View {
+        UsageRingsLayout(ringOrder: snapshot.ringOrder, compact: compact) { service, size in
+            UsageRingView(usage: snapshot.usage(for: service), date: date, size: size, compact: compact)
+        }
+    }
+}
+
+public struct UsageRingsLayout<Ring: View>: View {
+    public let ringOrder: [UsageService]
+    public let compact: Bool
+    private let ring: (UsageService, CGFloat) -> Ring
+
+    public init(ringOrder: [UsageService], compact: Bool = false,
+                @ViewBuilder ring: @escaping (UsageService, CGFloat) -> Ring) {
+        self.ringOrder = ringOrder
+        self.compact = compact
+        self.ring = ring
+    }
+
+    public var body: some View {
         GeometryReader { geometry in
             // The small widget has no percentage rows: use the full square for its 2 × 2 grid.
             let size = max(1, min(compact ? (geometry.size.width - 14) / 2 : (geometry.size.width - 48) / 4,
@@ -19,23 +38,19 @@ public struct UsageRingsView: View {
             if compact {
                 VStack(spacing: 14) {
                     HStack(spacing: 14) {
-                        ForEach(snapshot.ringOrder.prefix(2)) { ring($0, size: size) }
+                        ForEach(ringOrder.prefix(2)) { ring($0, size) }
                     }
                     HStack(spacing: 14) {
-                        ForEach(snapshot.ringOrder.suffix(2)) { ring($0, size: size) }
+                        ForEach(ringOrder.suffix(2)) { ring($0, size) }
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 HStack(alignment: .top, spacing: 16) {
-                    ForEach(snapshot.ringOrder) { ring($0, size: size) }
+                    ForEach(ringOrder) { ring($0, size) }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-    }
-
-    private func ring(_ service: UsageService, size: CGFloat) -> some View {
-        UsageRingView(usage: snapshot.usage(for: service), date: date, size: size, compact: compact)
     }
 }

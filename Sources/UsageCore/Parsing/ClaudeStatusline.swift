@@ -4,6 +4,8 @@ import Foundation
 public struct ClaudeStatuslineInput: Sendable {
     public let usage: ServiceUsage
     public let responseMarker: String
+    public let sessionMarker: String
+    public let apiDurationMilliseconds: Double
 }
 
 public enum ClaudeStatusline {
@@ -25,12 +27,16 @@ public enum ClaudeStatusline {
         guard !windows.isEmpty else { return nil }
         // Status lines also run for UI events. Only new API activity renews freshness.
         // Hash the session marker so no session ID or workspace metadata is stored.
-        let marker = SHA256.hash(data: Data("\(session):\(duration)".utf8))
-            .map { String(format: "%02x", $0) }.joined()
         return ClaudeStatuslineInput(
             usage: ServiceUsage(service: .claude, state: .ready, windows: windows, updatedAt: now),
-            responseMarker: marker
+            responseMarker: marker("\(session):\(duration)"),
+            sessionMarker: marker(session),
+            apiDurationMilliseconds: duration
         )
+    }
+
+    private static func marker(_ value: String) -> String {
+        SHA256.hash(data: Data(value.utf8)).map { String(format: "%02x", $0) }.joined()
     }
 
     private struct Input: Decodable {

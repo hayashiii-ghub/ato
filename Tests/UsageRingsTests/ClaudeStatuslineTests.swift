@@ -67,8 +67,12 @@ struct ClaudeStatuslineTests {
 
         let second = try #require(try ClaudeStatusline.parse(payload(session: "other-session"), now: now.addingTimeInterval(10)))
         try ClaudeStatuslineFile.write(second, to: location)
+        #expect(ClaudeStatuslineFile.read(from: location)?.usage.updatedAt == now)
+        let otherResponse = try #require(try ClaudeStatusline.parse(payload(duration: 2000, session: "other-session"),
+                                                                   now: now.addingTimeInterval(15)))
+        try ClaudeStatuslineFile.write(otherResponse, to: location)
         try ClaudeStatuslineFile.write(repeated, to: location)
-        #expect(ClaudeStatuslineFile.read(from: location)?.usage.updatedAt == now.addingTimeInterval(10))
+        #expect(ClaudeStatuslineFile.read(from: location)?.usage.updatedAt == now.addingTimeInterval(15))
         let newResponse = try #require(try ClaudeStatusline.parse(payload(duration: 2000), now: now.addingTimeInterval(20)))
         try ClaudeStatuslineFile.write(newResponse, to: location)
         #expect(ClaudeStatuslineFile.read(from: location)?.usage.updatedAt == now.addingTimeInterval(20))
@@ -109,5 +113,79 @@ struct ClaudeStatuslineTests {
         let repeated = try #require(try ClaudeStatusline.parse(payload(duration: 1000), now: now.addingTimeInterval(1300)))
         try ClaudeStatuslineFile.write(repeated, to: location)
         #expect(ClaudeStatuslineFile.read(from: location)?.usage == later.usage)
+    }
+
+    @Test func anIdleSessionCannotReviveOldUsageAfterItsResponseMarkerIsEvicted() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let location = folder.appendingPathComponent("usage.json")
+        let idle = try #require(try ClaudeStatusline.parse(payload(session: "idle-session"), now: now))
+        try ClaudeStatuslineFile.write(idle, to: location)
+        let activeWindows = ["five_hour": ["used_percentage": 95, "resets_at": now.timeIntervalSince1970 + 3600]]
+        for index in 1...256 {
+            let active = try #require(try ClaudeStatusline.parse(
+                payload(duration: Double(index), session: "active-session", windows: activeWindows),
+                now: now.addingTimeInterval(Double(index))
+            ))
+            try ClaudeStatuslineFile.write(active, to: location)
+        }
+        let latest = try #require(ClaudeStatuslineFile.read(from: location))
+        #expect(latest.responseMarkers.count == 256)
+        #expect(!latest.responseMarkers.contains(idle.responseMarker))
+        let repeated = try #require(try ClaudeStatusline.parse(payload(session: "idle-session"),
+                                                              now: now.addingTimeInterval(1300)))
+        let after = try ClaudeStatuslineFile.write(repeated, to: location)
+        #expect(after.usage == latest.usage)
+        #expect(after.usage.updatedAt == now.addingTimeInterval(256))
+        #expect(after.usage.remainingPercent(at: now.addingTimeInterval(1300)) == 5)
+    }
+
+    @Test func aLegacyCacheBaselinesAnUnknownSessionWithoutRenewingOldUsage() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let location = folder.appendingPathComponent("usage.json")
+        let first = try #require(try ClaudeStatusline.parse(payload(), now: now))
+        let original = try ClaudeStatuslineFile.write(first, to: location)
+        var legacy = try #require(try JSONSerialization.jsonObject(with: JSONEncoder().encode(original)) as? [String: Any])
+        legacy.removeValue(forKey: "sessionProgress")
+        try JSONSerialization.data(withJSONObject: legacy).write(to: location)
+        #expect(ClaudeStatuslineFile.read(from: location)?.sessionProgress == nil)
+
+        let baseline = try #require(try ClaudeStatusline.parse(payload(session: "unrecorded-session"),
+                                                              now: now.addingTimeInterval(1300)))
+        let migrated = try ClaudeStatuslineFile.write(baseline, to: location)
+        #expect(migrated.usage == original.usage)
+        #expect(migrated.usage.remainingPercent(at: now.addingTimeInterval(1300)) == nil)
+        #expect(migrated.sessionProgress?[baseline.sessionMarker]?.apiDurationMilliseconds == 1000)
+        let next = try #require(try ClaudeStatusline.parse(payload(duration: 2000, session: "unrecorded-session"),
+                                                          now: now.addingTimeInterval(1310)))
+        #expect(try ClaudeStatuslineFile.write(next, to: location).usage == next.usage)
+    }
+
+    @Test func sessionCapacityFailsClosedAndExpiredRecordsCanBeReplaced() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let location = folder.appendingPathComponent("usage.json")
+        let windows = ["five_hour": ["used_percentage": 25, "resets_at": now.timeIntervalSince1970 + 600]]
+        for index in 0..<256 {
+            let input = try #require(try ClaudeStatusline.parse(payload(session: "session-\(index)", windows: windows), now: now))
+            try ClaudeStatuslineFile.write(input, to: location)
+        }
+        let full = try #require(ClaudeStatuslineFile.read(from: location))
+        #expect(full.sessionProgress?.count == 256)
+        #expect(try Data(contentsOf: location).count <= 65_536)
+        let unknown = try #require(try ClaudeStatusline.parse(payload(session: "extra-session"), now: now.addingTimeInterval(10)))
+        #expect(try ClaudeStatuslineFile.write(unknown, to: location) == full)
+        let known = try #require(try ClaudeStatusline.parse(payload(duration: 2000, session: "session-0", windows: windows),
+                                                           now: now.addingTimeInterval(20)))
+        #expect(try ClaudeStatuslineFile.write(known, to: location).usage == known.usage)
+
+        let afterReset = try #require(try ClaudeStatusline.parse(payload(session: "extra-session"), now: now.addingTimeInterval(601)))
+        let baseline = try ClaudeStatuslineFile.write(afterReset, to: location)
+        #expect(baseline.sessionProgress?.count == 1)
+        #expect(baseline.usage == known.usage)
+        let next = try #require(try ClaudeStatusline.parse(payload(duration: 2000, session: "extra-session"),
+                                                          now: now.addingTimeInterval(602)))
+        #expect(try ClaudeStatuslineFile.write(next, to: location).usage == next.usage)
     }
 }

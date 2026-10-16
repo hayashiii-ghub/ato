@@ -35,8 +35,9 @@ final class UsageStore: ObservableObject {
         self.onPublish = onPublish
         // The pre-consent preference is preserved, but cannot authorize this connection method.
         let hasConsent = defaults.integer(forKey: Self.consentKey) == Self.consentVersion
-        needsConsent = !hasConsent
-        isEnabled = hasConsent && defaults.bool(forKey: Self.preferenceKey)
+        let resumesMonitoring = hasConsent && defaults.bool(forKey: Self.preferenceKey)
+        needsConsent = !resumesMonitoring
+        isEnabled = resumesMonitoring
         let savedOrder = defaults.stringArray(forKey: Self.ringOrderKey)?.compactMap(UsageService.init(rawValue:))
         ringOrder = UsageSnapshot.normalizedRingOrder(savedOrder ?? UsageSnapshot.defaultRingOrder)
         preferredPeriods = (defaults.dictionary(forKey: Self.preferredPeriodsKey) ?? [:]).reduce(into: [:]) { result, entry in

@@ -14,7 +14,7 @@ final class UsageWindowController {
 
     func show() {
         if window == nil {
-            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 508, height: 760),
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 508, height: 680),
                                   styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
             window.title = "Usage Rings"
             window.isReleasedWhenClosed = false

@@ -24,7 +24,7 @@ struct MonitoringConsentTests {
         }
     }
 
-    @Test func explicitEnableIsRememberedAndAnOffChoiceSurvivesRelaunch() async throws {
+    @Test func explicitEnableIsRememberedAndAnOffChoiceRequiresConsentAgain() async throws {
         let name = "UsageRingsConsentTests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: name))
         defer { defaults.removePersistentDomain(forName: name) }
@@ -42,9 +42,42 @@ struct MonitoringConsentTests {
         store.setEnabled(false)
         let offRelaunch = UsageStore(defaults: defaults, fetch: { await probe.fetch($0) }, onPublish: {})
         #expect(!offRelaunch.isEnabled)
-        #expect(!offRelaunch.needsConsent)
+        #expect(offRelaunch.needsConsent)
         await offRelaunch.refresh()
         #expect(await probe.count == 4)
+    }
+
+    @Test func aConsentedOffOrMissingPreferenceCanResumeAndStayEnabledAfterRelaunch() async throws {
+        for previous in [nil, false] as [Bool?] {
+            let name = "UsageRingsConsentTests.\(UUID().uuidString)"
+            let defaults = try #require(UserDefaults(suiteName: name))
+            defer { defaults.removePersistentDomain(forName: name) }
+            defaults.set(1, forKey: "usageMonitoringConsentVersion")
+            if let previous { defaults.set(previous, forKey: "usageMonitoringEnabled") }
+            let probe = FetchProbe()
+            let store = UsageStore(defaults: defaults, fetch: { await probe.fetch($0) }, onPublish: {})
+            defer { store.setEnabled(false) }
+
+            #expect(store.needsConsent)
+            #expect(!store.isEnabled)
+            store.setEnabled(true)
+            await store.refresh()
+            #expect(await probe.count == 0)
+            #expect((defaults.object(forKey: "usageMonitoringEnabled") as? Bool) == previous)
+
+            store.enableAfterConsent()
+            try await waitForFetches(probe)
+            #expect(!store.needsConsent)
+            #expect(store.isEnabled)
+            #expect(defaults.bool(forKey: "usageMonitoringEnabled"))
+
+            let relaunchProbe = FetchProbe()
+            let relaunched = UsageStore(defaults: defaults, fetch: { await relaunchProbe.fetch($0) }, onPublish: {})
+            #expect(!relaunched.needsConsent)
+            #expect(relaunched.isEnabled)
+            await relaunched.refresh()
+            #expect(await relaunchProbe.count == 4)
+        }
     }
 
     @Test func disablingWhileAReadIsInFlightCannotRestoreDisplayData() async throws {

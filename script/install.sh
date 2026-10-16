@@ -5,6 +5,32 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DESTINATION="$HOME/Applications/Usage Rings.app"
 if [[ -e "$DESTINATION" ]]; then
   test "$(plutil -extract CFBundleIdentifier raw "$DESTINATION/Contents/Info.plist")" = "work.hayashigoto.UsageRings"
+  python3 - "$DESTINATION/Contents/Info.plist" "$ROOT_DIR/dist/Usage Rings.app/Contents/Info.plist" <<'PY'
+from pathlib import Path
+import plistlib
+import re
+import sys
+
+def version(path):
+    metadata = plistlib.loads(Path(path).read_bytes())
+    if not isinstance(metadata, dict):
+        raise ValueError()
+    release = metadata.get("CFBundleShortVersionString", "")
+    build = str(metadata.get("CFBundleVersion", ""))
+    if not isinstance(release, str) or not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", release) or not re.fullmatch(r"[1-9][0-9]*", build):
+        raise ValueError()
+    return tuple(map(int, release.split("."))), int(build)
+
+try:
+    installed, incoming = map(version, sys.argv[1:])
+except (OSError, ValueError, plistlib.InvalidFileException):
+    raise SystemExit("Cannot compare app versions; nothing changed.")
+if incoming[0] < installed[0]:
+    raise SystemExit("The new app version must not be older than the installed version; nothing changed.")
+# Sparkle and WidgetKit use build numbers to distinguish updates.
+if incoming[1] <= installed[1]:
+    raise SystemExit("The new app build must be greater than the installed build; nothing changed.")
+PY
 fi
 APPLICATIONS_DIR="$(dirname "$DESTINATION")"
 mkdir -p "$APPLICATIONS_DIR"
@@ -13,6 +39,8 @@ trap 'rm -rf "$INSTALL_WORK_DIR"' EXIT
 STAGED_APP="$INSTALL_WORK_DIR/Usage Rings.app"
 ditto "$ROOT_DIR/dist/Usage Rings.app" "$STAGED_APP"
 codesign --verify --deep --strict "$STAGED_APP"
+CLAUDE_SETUP=("$ROOT_DIR/script/claude-statusline-setup.py" --helper "$DESTINATION/Contents/Helpers/UsageRingsStatusline" --skip-existing)
+python3 "${CLAUDE_SETUP[@]}" --check
 pkill -x UsageRings >/dev/null 2>&1 || true
 rm -rf "$DESTINATION"
 mv "$STAGED_APP" "$DESTINATION"
@@ -25,6 +53,11 @@ while IFS= read -r widget_pid; do
     kill -TERM "$widget_pid" 2>/dev/null || true
   fi
 done < <(pgrep -x UsageRingsWidget || true)
-python3 "$ROOT_DIR/script/claude-statusline-setup.py" --helper "$DESTINATION/Contents/Helpers/UsageRingsStatusline"
+CLAUDE_SETUP_STATUS=0
+python3 "${CLAUDE_SETUP[@]}" || CLAUDE_SETUP_STATUS=$?
 /usr/bin/open "$DESTINATION"
 echo "Installed: $DESTINATION"
+if [[ "$CLAUDE_SETUP_STATUS" != 0 ]]; then
+  echo "Usage Rings opened, but its Claude status line could not be configured." >&2
+fi
+exit "$CLAUDE_SETUP_STATUS"
