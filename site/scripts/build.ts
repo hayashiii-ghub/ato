@@ -13,7 +13,7 @@ const result = await Bun.build({
   minify: true,
   naming: {
     entry: "[name].[ext]",
-    asset: "assets/[name].[ext]"
+    asset: "assets/[name]-[hash].[ext]"
   }
 });
 if (!result.success) throw new AggregateError(result.logs, "Site build failed");
