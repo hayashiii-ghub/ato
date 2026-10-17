@@ -139,9 +139,53 @@ struct UsageCLITests {
         #expect(!request.httpShouldHandleCookies)
     }
 
+    @Test func sharedBridgeAcceptsExactlySixtyFourKiBWithWidgetTimeoutsAndNoSessionState() async throws {
+        var data = try JSONEncoder().encode(UsageSnapshot.empty)
+        data.append(Data(repeating: 32, count: 65_536 - data.count))
+        FixtureProtocol.state.install(.response(status: 200, data: data, headers: [:]))
+        let configuration = fixtureConfiguration()
+        configuration.httpAdditionalHeaders = ["Authorization": "synthetic-private", "Cookie": "synthetic-private"]
+        configuration.connectionProxyDictionary = ["HTTPEnable": 1, "HTTPProxy": "127.0.0.1", "HTTPPort": 9]
+        configuration.urlCache = URLCache(memoryCapacity: 1_024, diskCapacity: 0, diskPath: nil)
+        #expect(try await UsageSnapshotBridge.load(configuration: configuration, requestTimeout: 3, resourceTimeout: 4) == .empty)
+        #expect(configuration.timeoutIntervalForRequest == 3)
+        #expect(configuration.timeoutIntervalForResource == 4)
+        #expect(configuration.httpCookieStorage == nil)
+        #expect(!configuration.httpShouldSetCookies)
+        #expect(configuration.urlCredentialStorage == nil)
+        #expect(configuration.urlCache == nil)
+        #expect(configuration.httpAdditionalHeaders == nil)
+        #expect(configuration.connectionProxyDictionary?.isEmpty == true)
+        #expect(configuration.requestCachePolicy == .reloadIgnoringLocalCacheData)
+        let request = try #require(FixtureProtocol.state.requests.first)
+        #expect(request.timeoutInterval == 3)
+        #expect(request.value(forHTTPHeaderField: "Authorization") == nil)
+        #expect(request.value(forHTTPHeaderField: "Cookie") == nil)
+    }
+
+    @Test func sharedProviderSessionKeepsExplicitCredentialsAndProxyWithProviderTimeouts() async throws {
+        FixtureProtocol.state.install(.response(status: 200, data: Data(), headers: [:]))
+        let configuration = fixtureConfiguration()
+        configuration.connectionProxyDictionary = ["HTTPEnable": 1, "HTTPProxy": "127.0.0.1", "HTTPPort": 9]
+        let session = UsageHTTPSession.make(configuration: configuration, requestTimeout: 20, resourceTimeout: 30)
+        defer { session.invalidateAndCancel() }
+        var request = URLRequest(url: URL(string: "https://example.invalid/usage")!)
+        request.setValue("synthetic-provider-cookie", forHTTPHeaderField: "Cookie")
+        request.setValue("Bearer synthetic-provider-token", forHTTPHeaderField: "Authorization")
+        _ = try await session.data(for: request)
+        let sent = try #require(FixtureProtocol.state.requests.first)
+        #expect(sent.value(forHTTPHeaderField: "Cookie") == "synthetic-provider-cookie")
+        #expect(sent.value(forHTTPHeaderField: "Authorization") == "Bearer synthetic-provider-token")
+        #expect(session.configuration.timeoutIntervalForRequest == 20)
+        #expect(session.configuration.timeoutIntervalForResource == 30)
+        #expect(session.configuration.connectionProxyDictionary?["HTTPEnable"] as? Int == 1)
+        #expect(session.configuration.connectionProxyDictionary?["HTTPProxy"] as? String == "127.0.0.1")
+    }
+
     @Test func bridgeRejectsBadStatusMalformedJSONAndOversizedResponses() async {
         for response in [
             FixtureProtocol.Response.response(status: 403, data: Data(), headers: [:]),
+            .nonHTTP,
             .response(status: 200, data: Data("synthetic-invalid-json".utf8), headers: [:]),
             .response(status: 200, data: Data(repeating: 32, count: 65_537), headers: [:]),
             .response(status: 200, data: Data(), headers: ["Content-Length": "65537"])
@@ -162,10 +206,15 @@ struct UsageCLITests {
         #expect(FixtureProtocol.state.requests.first?.url == UsageSnapshot.bridgeURL)
     }
 
-    @Test func missingBridgeIsReportedAsAppUnavailable() async {
-        FixtureProtocol.state.install(.unavailable)
-        await #expect(throws: UsageCLIError.appUnavailable) {
-            try await UsageBridgeClient.load(configuration: fixtureConfiguration())
+    @Test func connectionFailuresTimeoutsAndCancellationAreReportedAsAppUnavailable() async {
+        for code in [URLError.Code.cannotConnectToHost, .timedOut, .cancelled] {
+            FixtureProtocol.state.install(.failure(code))
+            await #expect(throws: UsageSnapshotBridge.Failure.unavailable) {
+                try await UsageSnapshotBridge.load(configuration: fixtureConfiguration())
+            }
+            await #expect(throws: UsageCLIError.appUnavailable) {
+                try await UsageBridgeClient.load(configuration: fixtureConfiguration())
+            }
         }
     }
 
@@ -182,12 +231,12 @@ struct UsageCLITests {
     private final class FixtureProtocol: URLProtocol, @unchecked Sendable {
         enum Response {
             case response(status: Int, data: Data, headers: [String: String])
-            case redirect, unavailable
+            case redirect, nonHTTP, failure(URLError.Code)
         }
 
         final class State: @unchecked Sendable {
             private let lock = NSLock()
-            private var response = Response.unavailable
+            private var response = Response.failure(.cannotConnectToHost)
             private var recorded: [URLRequest] = []
 
             func install(_ response: Response) {
@@ -219,8 +268,13 @@ struct UsageCLITests {
         override func startLoading() {
             switch Self.state.capture(request) {
             case .response(let status, let data, let headers): respond(status: status, data: data, headers: headers)
-            case .unavailable:
-                client?.urlProtocol(self, didFailWithError: URLError(.cannotConnectToHost))
+            case .failure(let code):
+                client?.urlProtocol(self, didFailWithError: URLError(code))
+            case .nonHTTP:
+                let response = URLResponse(url: request.url!, mimeType: "application/json", expectedContentLength: 0,
+                                           textEncodingName: nil)
+                client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+                client?.urlProtocolDidFinishLoading(self)
             case .redirect:
                 if request.url == UsageSnapshot.bridgeURL {
                     let destination = URL(string: "https://example.invalid/usage")!

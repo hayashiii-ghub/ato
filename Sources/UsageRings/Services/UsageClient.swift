@@ -1,15 +1,6 @@
 import UsageCore
 import Foundation
 
-private final class UsageSessionDelegate: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
-    func urlSession(_ session: URLSession, task: URLSessionTask,
-                    willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest,
-                    completionHandler: @escaping (URLRequest?) -> Void) {
-        // Session credentials are only ever sent to the original provider endpoint.
-        completionHandler(nil)
-    }
-}
-
 enum UsageClient {
     static func fetch(_ service: UsageService) async -> ServiceUsage {
         do {
@@ -42,14 +33,7 @@ enum UsageClient {
     }
 
     private static func read(_ input: URLRequest) async throws -> Data {
-        let configuration = URLSessionConfiguration.ephemeral
-        configuration.timeoutIntervalForRequest = 20
-        configuration.timeoutIntervalForResource = 30
-        configuration.httpCookieStorage = nil
-        configuration.urlCredentialStorage = nil
-        configuration.urlCache = nil
-        configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
-        let session = URLSession(configuration: configuration, delegate: UsageSessionDelegate(), delegateQueue: nil)
+        let session = UsageHTTPSession.make(requestTimeout: 20, resourceTimeout: 30)
         defer { session.invalidateAndCancel() }
         var request = input
         request.setValue("application/json", forHTTPHeaderField: "Accept")
