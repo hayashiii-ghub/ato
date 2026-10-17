@@ -58,6 +58,6 @@ python3 "${CLAUDE_SETUP[@]}" || CLAUDE_SETUP_STATUS=$?
 /usr/bin/open "$DESTINATION"
 echo "Installed: $DESTINATION"
 if [[ "$CLAUDE_SETUP_STATUS" != 0 ]]; then
-  echo "Usage Rings opened, but its Claude status line could not be configured." >&2
+  echo "ato opened, but its Claude status line could not be configured." >&2
 fi
 exit "$CLAUDE_SETUP_STATUS"

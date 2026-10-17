@@ -37,7 +37,7 @@ private struct ComparisonSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Usage Rings · Before / After").font(.title.bold())
+            Text("ato · Before / After").font(.title.bold())
             Text("Production SwiftUI views · synthetic fixtures · desktop compositing is not simulated")
                 .font(.subheadline)
             HStack(alignment: .top, spacing: 24) {
@@ -89,7 +89,7 @@ private enum Fixture: String, CaseIterable {
 private struct PreviewSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text("Usage Rings · SwiftUI render").font(.title2.bold())
+            Text("ato · SwiftUI render").font(.title2.bold())
             Text("Synthetic fixtures · small 170 × 170 / medium 360 × 170 pt · 2× scale")
                 .font(.caption).foregroundStyle(.secondary)
             HStack(alignment: .top, spacing: 24) {

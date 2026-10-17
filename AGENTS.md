@@ -1,4 +1,4 @@
-# Usage Rings
+# ato
 
 Keep user setup/privacy in [README.md](README.md) and repository instructions here.
 Retain `LICENSE`, `THIRD_PARTY_NOTICES.md`, and functional `Skills/*/SKILL.md`;
@@ -18,6 +18,8 @@ ask before adding other documentation. Keep the app independent of cc:.
 - `site/` owns the website's Bun/TypeScript source and static assets. Edit `src/`
   and `public/`, not generated `dist/`. Keep its existing Sites project ID and
   keep public feature claims aligned with the published app release.
+- The visible brand is `ato`. Keep the `Usage Rings.app` path, bundle IDs,
+  widget kind, CLI name, cache paths, and update URLs compatible with existing installs.
 
 ## Validate
 

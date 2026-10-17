@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Install/remove the Usage Rings status line without replacing other customizations."""
+"""Install/remove the ato status line without replacing other customizations."""
 import argparse
 import json
 import os
@@ -20,7 +20,7 @@ def configure(settings, helper, uninstall=False, skip_existing=False):
     if current is not None and not owned:
         if skip_existing:
             return result
-        raise ValueError("Existing Claude status line preserved. Compose it with Usage Rings before connecting.")
+        raise ValueError("Existing Claude status line preserved. Compose it with ato before connecting.")
     result["statusLine"] = {**(current or {}), "type": "command", "command": command}
     return result
 
@@ -48,7 +48,7 @@ def main():
         print("Claude status line settings checked.")
         return
     if not args.uninstall and not args.helper.is_file():
-        raise SystemExit("Install Usage Rings before connecting Claude.")
+        raise SystemExit("Install ato before connecting Claude.")
     try:
         if updated != settings:
             config.mkdir(parents=True, exist_ok=True)

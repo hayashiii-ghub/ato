@@ -16,7 +16,7 @@ final class UsageWindowController {
         if window == nil {
             let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 508, height: 680),
                                   styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
-            window.title = "Usage Rings"
+            window.title = "ato"
             window.isReleasedWhenClosed = false
             window.contentView = NSHostingView(rootView: ScrollView {
                 UsageDetailsView(store: store, updateController: updateController)

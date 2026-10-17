@@ -56,7 +56,7 @@ enum UsageCLI {
     Usage: usage-rings status [--json] [--provider codex|claude|cursor|grok|gemini] [--threshold PERCENT]
            usage-rings --help
 
-    Reads the running Usage Rings app's current usage snapshot.
+    Reads the running ato app's current usage snapshot.
     Low-remaining alerts default to 20%. Threshold must be above 0 and at most 100.
     """
 
@@ -111,7 +111,7 @@ enum UsageCLI {
         }
         switch failure {
         case .invalidArguments: return "usage-rings: invalid arguments\n\(help)"
-        case .appUnavailable: return "usage-rings: app unavailable. Open Usage Rings and try again."
+        case .appUnavailable: return "usage-rings: app unavailable. Open ato and try again."
         case .invalidResponse: return "usage-rings: invalid app response."
         }
     }

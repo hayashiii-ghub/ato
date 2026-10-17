@@ -21,4 +21,4 @@ const server = Bun.serve({
   fetch: () => new Response("Not found", { status: 404 })
 });
 
-console.log(`Usage Rings ${preview ? "preview" : "dev"}: ${server.url}`);
+console.log(`ato ${preview ? "preview" : "dev"}: ${server.url}`);

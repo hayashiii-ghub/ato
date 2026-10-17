@@ -1,14 +1,17 @@
-# Usage Rings
+# ato
 
 Remaining Codex, Claude, Cursor, Grok, and Gemini usage on **macOS 26+ / Apple silicon**.
+
+Previously Usage Rings. The app folder and `usage-rings` command keep their original
+names so existing helper settings and updates continue to work.
 
 ## Install and use
 
 1. Download the [DMG](https://github.com/hayashiii-ghub/usage-rings/releases/latest/download/usage-rings-macos.dmg)
    or ZIP from [Releases](https://github.com/hayashiii-ghub/usage-rings/releases).
-2. Quit Usage Rings and replace the app in its existing Applications folder.
+2. Quit ato and replace the app in its existing Applications folder.
 3. Open it, read the connection explanation, and choose **Enable AI usage**.
-4. Desktop → **Edit Widgets** → **Usage Rings → AI Usage**.
+4. Desktop → **Edit Widgets** → **ato → AI Usage**.
 
 The app is ad-hoc signed, **not notarized**. If macOS blocks it and you trust the
 source, use Apple's [per-app approval](https://support.apple.com/102445).
@@ -21,12 +24,12 @@ main window; **5 hours** and **Week** select a period. Choices also apply to the
 Missing, failed, expired, or 20-minute-old readings show **—**.
 
 Monitoring refreshes every five minutes and after waking. Closing the window keeps
-it running; **Quit Usage Rings** stops future polling, and reopening resumes it.
+it running; **Quit ato** stops future polling, and reopening resumes it.
 An in-flight request may finish. Widget updates follow macOS scheduling.
 
 ## Accounts
 
-Sign in separately; Usage Rings starts no login flow. API-key billing and pooled
+Sign in separately; ato starts no login flow. API-key billing and pooled
 Grok enterprise allowances are unsupported.
 
 | Service | Required sign-in |

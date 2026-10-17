@@ -20,4 +20,4 @@ if (!result.success) throw new AggregateError(result.logs, "Site build failed");
 
 // Demo rings and social metadata use fixed URLs that the HTML bundler cannot discover.
 await cp(resolve(root, "public"), outdir, { recursive: true });
-console.log(`Built Usage Rings into ${outdir}`);
+console.log(`Built ato into ${outdir}`);

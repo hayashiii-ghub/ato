@@ -29,6 +29,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 <key>CFBundleExecutable</key><string>UsageRings</string>
 <key>CFBundleName</key><string>Usage Rings</string>
 <key>CFBundleDisplayName</key><string>Usage Rings</string>
+<key>SUBundleName</key><string>ato</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleIconFile</key><string>AppIcon</string>
 <key>CFBundleShortVersionString</key><string>0.1.0</string>
@@ -62,6 +63,15 @@ cat > "$WIDGET/Contents/Info.plist" <<'PLIST'
 </dict></plist>
 PLIST
 for BUNDLE in "$APP" "$WIDGET"; do
+  # Localize the visible brand while retaining existing helper and update paths.
+  /usr/bin/plutil -insert CFBundleDevelopmentRegion -string en "$BUNDLE/Contents/Info.plist"
+  for LANGUAGE in en ja; do
+    mkdir -p "$BUNDLE/Contents/Resources/$LANGUAGE.lproj"
+    cat > "$BUNDLE/Contents/Resources/$LANGUAGE.lproj/InfoPlist.strings" <<'STRINGS'
+"CFBundleName" = "ato";
+"CFBundleDisplayName" = "ato";
+STRINGS
+  done
   /usr/bin/plutil -replace CFBundleShortVersionString -string "$APP_VERSION" "$BUNDLE/Contents/Info.plist"
   /usr/bin/plutil -replace CFBundleVersion -string "$APP_BUILD" "$BUNDLE/Contents/Info.plist"
   /usr/bin/plutil -insert UsageRingsSourceRevision -string "$SOURCE_REVISION" "$BUNDLE/Contents/Info.plist"

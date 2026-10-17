@@ -241,9 +241,9 @@ def create_disk_image(app, staging, destination, mode):
     run("/usr/bin/ditto", str(app), str(contents / "Usage Rings.app"))
     (contents / "Applications").symlink_to("/Applications")
     (contents / "INSTALL.txt").write_text(
-        f"Usage Rings — macOS 26+, {architecture}\n\n"
-        "Quit an existing copy, then drag Usage Rings.app to Applications.\n"
-        "Open the installed app and add Usage Rings > AI Usage using Edit Widgets.\n"
+        f"ato — macOS 26+, {architecture}\n\n"
+        "Quit an existing copy, then drag ato to Applications.\n"
+        "Open the installed app and add ato > AI Usage using Edit Widgets.\n"
         "Keep the app running to refresh usage. Xcode is not needed.\n\n"
         "This release is not notarized by Apple.\n"
         "macOS may block the first launch. If you trust this source, see Apple's\n"
@@ -253,7 +253,7 @@ def create_disk_image(app, staging, destination, mode):
         "Instructions: https://github.com/hayashiii-ghub/usage-rings#accounts\n",
         encoding="utf-8",
     )
-    run("/usr/bin/hdiutil", "create", "-volname", "Usage Rings", "-srcfolder",
+    run("/usr/bin/hdiutil", "create", "-volname", "ato", "-srcfolder",
         str(contents), "-fs", "HFS+", "-format", "UDZO", str(destination))
     run("/usr/bin/hdiutil", "verify", str(destination))
     mount = staging / "dmg-mount"
