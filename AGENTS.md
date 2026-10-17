@@ -16,8 +16,10 @@ ask before adding other documentation. Keep the app independent of cc:.
 - Unknown, failed, expired, or 20-minute-old usage is unavailable. Preserve actual
   observation times; never infer a restored allowance. Keep README's security FAQ anchor.
 - `site/` owns the website's Bun/TypeScript source and static assets. Edit `src/`
-  and `public/`, not generated `dist/`. Keep its existing Sites project ID and
-  keep public feature claims aligned with the published app release.
+  and `public/`, not generated `dist/`. Vercel builds `site/` and publishes `dist/`
+  at `https://ato.shigoto.dev` from `main`; pull requests get previews. Retain the
+  former Sites identity for old-URL redirects. Keep feature claims aligned with
+  the published app release.
 - The visible brand is `ato?`. Keep the `Usage Rings.app` path, bundle IDs,
   widget kind, CLI name, cache paths, and update URLs compatible with existing installs.
 - Keep the old `usage-rings` repository name unused; installed update URLs rely on its GitHub redirect.
@@ -31,8 +33,9 @@ must match full HEAD; dirty builds are marked. `make run` builds/opens;
 `make install` follows [README](README.md#build-from-source).
 
 For website changes, install with `cd site && bun install --frozen-lockfile`, then
-run `make site-check` and `make site-build` from the repository root. Verify the
-language switch, demo controls, and desktop/mobile layout when changing the browser code.
+run `make site-check` and `make site-build` from the repository root, then
+`cd site && bun run test`. Verify the language switch, demo controls, and
+desktop/mobile layout when changing the browser code.
 
 `swift run WidgetPreview dist/widget-preview.png` renders synthetic small/medium,
 light/dark fixtures; a second image argument adds comparison. It does not verify
