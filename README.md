@@ -99,7 +99,7 @@ release instructions: [AGENTS.md](AGENTS.md). Licenses: [LICENSE](LICENSE) and
 
 ## Website
 
-The [public website](https://usage-rings.hayashiii-gpt.chatgpt.site) is hosted on Sites.
+The [public website](https://ato.hayashiii-gpt.chatgpt.site) is hosted on Sites.
 Its source lives in [`site/`](site), using Bun and TypeScript with static HTML/CSS.
 Python is used only by the app's setup, packaging, and tests.
 
