@@ -8,7 +8,7 @@ type DemoState = "normal" | "low" | "missing";
 const providers: readonly Provider[] = [
   { name: "Codex", asset: "codex.svg" },
   { name: "Claude", asset: "claude.svg" },
-  { name: "Cursor", asset: "cursor.svg" },
+  { name: "Gemini", asset: "gemini.svg" },
   { name: "Grok", asset: "grokBot.svg" }
 ];
 const samples: Record<DemoState, readonly Reading[]> = {
