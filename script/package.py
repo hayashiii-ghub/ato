@@ -218,6 +218,11 @@ def create_appcast(archive, appcast, manifest, staging):
         raise ValueError("Sparkle download prefix must be an HTTPS URL without credentials or a fragment.")
     if not prefix.endswith("/"):
         raise ValueError("Sparkle download prefix must end in a slash.")
+    # Sparkle otherwise derives the feed title from the retained app folder name.
+    appcast.write_text(
+        f'<rss xmlns:sparkle="{SPARKLE_NAMESPACE}" version="2.0">'
+        '<channel><title>ato?</title></channel></rss>', encoding="utf-8",
+    )
     args = [str(executable), "--download-url-prefix", prefix, "--maximum-deltas", "0",
             "--link", "https://github.com/hayashiii-ghub/usage-rings/releases", "-o", str(appcast)]
     private_key = os.environ.get("SPARKLE_ED_PRIVATE_KEY")
@@ -241,9 +246,9 @@ def create_disk_image(app, staging, destination, mode):
     run("/usr/bin/ditto", str(app), str(contents / "Usage Rings.app"))
     (contents / "Applications").symlink_to("/Applications")
     (contents / "INSTALL.txt").write_text(
-        f"ato — macOS 26+, {architecture}\n\n"
-        "Quit an existing copy, then drag ato to Applications.\n"
-        "Open the installed app and add ato > AI Usage using Edit Widgets.\n"
+        f"ato? — macOS 26+, {architecture}\n\n"
+        "Quit an existing copy, then drag ato? to Applications.\n"
+        "Open the installed app and add ato? > AI Usage using Edit Widgets.\n"
         "Keep the app running to refresh usage. Xcode is not needed.\n\n"
         "This release is not notarized by Apple.\n"
         "macOS may block the first launch. If you trust this source, see Apple's\n"
@@ -253,7 +258,7 @@ def create_disk_image(app, staging, destination, mode):
         "Instructions: https://github.com/hayashiii-ghub/usage-rings#accounts\n",
         encoding="utf-8",
     )
-    run("/usr/bin/hdiutil", "create", "-volname", "ato", "-srcfolder",
+    run("/usr/bin/hdiutil", "create", "-volname", "ato?", "-srcfolder",
         str(contents), "-fs", "HFS+", "-format", "UDZO", str(destination))
     run("/usr/bin/hdiutil", "verify", str(destination))
     mount = staging / "dmg-mount"

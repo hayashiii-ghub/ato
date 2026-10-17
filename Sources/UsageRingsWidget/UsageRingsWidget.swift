@@ -9,7 +9,7 @@ struct UsageRingsWidget: Widget {
             UsageWidgetView(entry: entry)
         }
         .configurationDisplayName("AI Usage")
-        .description("Your remaining AI usage at a glance. Open ato to connect and refresh.")
+        .description("Your remaining AI usage at a glance. Open ato? to connect and refresh.")
         .supportedFamilies([.systemSmall, .systemMedium])
         .contentMarginsDisabled()
     }

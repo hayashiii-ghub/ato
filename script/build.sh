@@ -29,7 +29,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 <key>CFBundleExecutable</key><string>UsageRings</string>
 <key>CFBundleName</key><string>Usage Rings</string>
 <key>CFBundleDisplayName</key><string>Usage Rings</string>
-<key>SUBundleName</key><string>ato</string>
+<key>SUBundleName</key><string>ato?</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleIconFile</key><string>AppIcon</string>
 <key>CFBundleShortVersionString</key><string>0.1.0</string>
@@ -68,8 +68,8 @@ for BUNDLE in "$APP" "$WIDGET"; do
   for LANGUAGE in en ja; do
     mkdir -p "$BUNDLE/Contents/Resources/$LANGUAGE.lproj"
     cat > "$BUNDLE/Contents/Resources/$LANGUAGE.lproj/InfoPlist.strings" <<'STRINGS'
-"CFBundleName" = "ato";
-"CFBundleDisplayName" = "ato";
+"CFBundleName" = "ato?";
+"CFBundleDisplayName" = "ato?";
 STRINGS
   done
   /usr/bin/plutil -replace CFBundleShortVersionString -string "$APP_VERSION" "$BUNDLE/Contents/Info.plist"

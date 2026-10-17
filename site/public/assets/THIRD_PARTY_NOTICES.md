@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-Codex usage parsing was informed by [CodexIsland](https://github.com/ericjypark/codex-island). ato
+Codex usage parsing was informed by [CodexIsland](https://github.com/ericjypark/codex-island). ato?
 and CodexIsland are independent projects; this acknowledgement does not imply
 affiliation or endorsement.
 

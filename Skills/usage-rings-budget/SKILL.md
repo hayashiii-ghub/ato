@@ -1,9 +1,9 @@
 ---
 name: usage-rings-budget
-description: Give the working agent remaining-usage notices at 20%, 10%, and 5%, with time until reset, through ato on macOS. Use when the user wants the agent to stay aware of its account allowance while working.
+description: Give the working agent remaining-usage notices at 20%, 10%, and 5%, with time until reset, through ato? on macOS. Use when the user wants the agent to stay aware of its account allowance while working.
 ---
 
-# ato budget
+# ato? budget
 
 Give the agent usage awareness while it continues the authorized task. A low-usage
 notice does not require a user reply or automatically split, stop, or switch work.
@@ -15,7 +15,7 @@ Use the provider backing this task: `codex`, `claude`, `cursor`, `grok`, or
 ask which to check. These are account limits, not remaining conversation context
 or API credits.
 
-Find `Contents/Helpers/usage-rings` in the installed ato app. The normal
+Find `Contents/Helpers/usage-rings` in the installed ato? app. The normal
 locations are `~/Applications/Usage Rings.app` and `/Applications/Usage Rings.app`;
 use the known installation when both exist. For example, for a Codex task:
 

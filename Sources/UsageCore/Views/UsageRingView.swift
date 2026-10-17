@@ -51,7 +51,7 @@ public struct UsageRingView: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(usage.service.name)
-        .accessibilityValue((remaining.map { "\(Int($0.rounded())) percent remaining" } ?? "Usage unavailable. Open ato to refresh.")
+        .accessibilityValue((remaining.map { "\(Int($0.rounded())) percent remaining" } ?? "Usage unavailable. Open ato? to refresh.")
                             + (usage.preferredPeriod.map { ", \($0.title)" } ?? ""))
     }
 
