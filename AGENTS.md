@@ -20,6 +20,7 @@ ask before adding other documentation. Keep the app independent of cc:.
   keep public feature claims aligned with the published app release.
 - The visible brand is `ato?`. Keep the `Usage Rings.app` path, bundle IDs,
   widget kind, CLI name, cache paths, and update URLs compatible with existing installs.
+- Keep the old `usage-rings` repository name unused; installed update URLs rely on its GitHub redirect.
 
 ## Validate
 

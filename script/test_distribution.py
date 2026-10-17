@@ -16,7 +16,7 @@ distribution = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(distribution)
 PUBLIC_KEY = base64.b64encode(bytes(32)).decode()
 SPARKLE_CONFIGURATION = {
-    "feed_url": "https://github.com/hayashiii-ghub/usage-rings/releases/latest/download/appcast.xml",
+    "feed_url": "https://github.com/hayashiii-ghub/ato/releases/latest/download/appcast.xml",
     "public_ed_key": PUBLIC_KEY,
     "keychain_account": "work.hayashigoto.UsageRings",
 }

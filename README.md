@@ -7,8 +7,8 @@ names so existing helper settings and updates continue to work.
 
 ## Install and use
 
-1. Download the [DMG](https://github.com/hayashiii-ghub/usage-rings/releases/latest/download/usage-rings-macos.dmg)
-   or ZIP from [Releases](https://github.com/hayashiii-ghub/usage-rings/releases).
+1. Download the [DMG](https://github.com/hayashiii-ghub/ato/releases/latest/download/usage-rings-macos.dmg)
+   or ZIP from [Releases](https://github.com/hayashiii-ghub/ato/releases).
 2. Quit ato? and replace the app in its existing Applications folder.
 3. Open it, read the connection explanation, and choose **Enable AI usage**.
 4. Desktop → **Edit Widgets** → **ato? → AI Usage**.

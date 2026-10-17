@@ -70,7 +70,7 @@ export const translations={
     "faq4Question": "Which accounts are supported?",
     "faq4Answer": "The app shows included quota for supported Codex, Claude Code, Cursor, Grok, and Gemini plans. Gemini usage comes from Antigravity CLI. API-key billing and pooled Grok enterprise quotas are unsupported. Cursor and Grok use internal endpoints that may require an app update after provider changes.",
     "faq5Question": "Can I stop usage reads?",
-    "faq5Answer": "Choose Quit ato? or press Command-Q to stop future periodic and wake-triggered reads. Closing the window keeps monitoring active; reopening the app resumes it. An in-flight request may finish, and macOS may retain the widget cache. The Claude Code helper runs independently; use the <a href=\"https://github.com/hayashiii-ghub/usage-rings#claude-helper\">separate disconnect instructions</a> to stop that integration.",
+    "faq5Answer": "Choose Quit ato? or press Command-Q to stop future periodic and wake-triggered reads. Closing the window keeps monitoring active; reopening the app resumes it. An in-flight request may finish, and macOS may retain the widget cache. The Claude Code helper runs independently; use the <a href=\"https://github.com/hayashiii-ghub/ato#claude-helper\">separate disconnect instructions</a> to stop that integration.",
     "faq6Question": "Is this part of Context?",
     "faq6Answer": "No. ato? is an independent macOS app. It has its own host app, widget, and source repository.",
     "finalTitle": "Know what's left.<br>Get back to making.",
@@ -127,7 +127,7 @@ export const translations={
     "geminiWindow": "5-hour / weekly · Antigravity CLI",
     "geminiMetric": "5H / WK",
     "cliQuestion": "Can my AI assistant check the remaining usage?",
-    "cliAnswer": "The bundled read-only CLI provides the running app's remaining usage and reset times as text or JSON. Set up the usage-rings-budget skill separately to let an assistant check at natural pauses and retain notices below 20%, 10%, and 5%. It does not stop work automatically, sign in, refresh usage, or change settings. See the <a href=\"https://github.com/hayashiii-ghub/usage-rings#cli-and-ai-skill\">CLI and skill guide</a>."
+    "cliAnswer": "The bundled read-only CLI provides the running app's remaining usage and reset times as text or JSON. Set up the usage-rings-budget skill separately to let an assistant check at natural pauses and retain notices below 20%, 10%, and 5%. It does not stop work automatically, sign in, refresh usage, or change settings. See the <a href=\"https://github.com/hayashiii-ghub/ato#cli-and-ai-skill\">CLI and skill guide</a>."
   },
   "ja": {
     "skip": "本文へ移動",
@@ -200,7 +200,7 @@ export const translations={
     "faq4Question": "どのアカウントに対応していますか？",
     "faq4Answer": "Codex、Claude Code、Cursor、Grok、Geminiの対応プランに含まれる利用枠を表示します。GeminiはAntigravity CLI経由です。APIキーの従量課金とGrokの共有型エンタープライズ利用枠には対応していません。Cursor・Grokの内部取得先は、サービス側の変更に合わせてアプリの更新が必要になることがあります。",
     "faq5Question": "利用データの取得を止められますか？",
-    "faq5Answer": "「Quit ato?」またはCommand-Qで、以後の定期取得とスリープ復帰時の取得を止めます。ウィンドウを閉じても取得は継続し、アプリを開き直すと再開します。進行中のリクエストが完了する場合や、macOSにウィジェットのキャッシュが残る場合があります。Claude Codeのヘルパーは独立して動くため、連携自体を止めるには<a href=\"https://github.com/hayashiii-ghub/usage-rings#claude-helper\">別の解除手順</a>を使ってください。",
+    "faq5Answer": "「Quit ato?」またはCommand-Qで、以後の定期取得とスリープ復帰時の取得を止めます。ウィンドウを閉じても取得は継続し、アプリを開き直すと再開します。進行中のリクエストが完了する場合や、macOSにウィジェットのキャッシュが残る場合があります。Claude Codeのヘルパーは独立して動くため、連携自体を止めるには<a href=\"https://github.com/hayashiii-ghub/ato#claude-helper\">別の解除手順</a>を使ってください。",
     "faq6Question": "Contextの一部ですか？",
     "faq6Answer": "ato?は、Contextとは独立したmacOSアプリです。専用のホストアプリ、ウィジェット、ソースリポジトリがあります。",
     "finalTitle": "残りが見えたら、<br>つくる時間へ。",
@@ -257,7 +257,7 @@ export const translations={
     "geminiWindow": "5時間・週ごと · Antigravity CLI",
     "geminiMetric": "5h / 週",
     "cliQuestion": "AIから残量を確認できますか？",
-    "cliAnswer": "同梱の読み取り専用CLIで、起動中のアプリの残量・リセット時刻をテキストやJSONで読めます。usage-rings-budgetスキルを別途設定すると、AIが作業の区切りに確認し、20%・10%・5%未満の残量を作業中の情報として保持します。自動で作業を止めたり、ログイン・利用データの更新・設定変更を行ったりしません。詳しくは<a href=\"https://github.com/hayashiii-ghub/usage-rings#cli-and-ai-skill\">CLIとスキルの設定手順</a>をご覧ください。"
+    "cliAnswer": "同梱の読み取り専用CLIで、起動中のアプリの残量・リセット時刻をテキストやJSONで読めます。usage-rings-budgetスキルを別途設定すると、AIが作業の区切りに確認し、20%・10%・5%未満の残量を作業中の情報として保持します。自動で作業を止めたり、ログイン・利用データの更新・設定変更を行ったりしません。詳しくは<a href=\"https://github.com/hayashiii-ghub/ato#cli-and-ai-skill\">CLIとスキルの設定手順</a>をご覧ください。"
   }
 };
 

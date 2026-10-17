@@ -128,7 +128,7 @@ struct UsageDetailsView: View {
             Text("Only usage and reset times are shared with the widget. Other apps on this Mac can read those display values. No usage data is sent to the ato? developer.")
             Text("Quit ato? to stop future reads. Opening the app again resumes them. The separate Claude Code status-line helper is disconnected separately.")
             HStack {
-                Link("Security and data FAQ", destination: URL(string: "https://github.com/hayashiii-ghub/usage-rings#security-and-data-faq")!)
+                Link("Security and data FAQ", destination: URL(string: "https://github.com/hayashiii-ghub/ato#security-and-data-faq")!)
                 Spacer()
                 Button("Enable AI usage") { store.enableAfterConsent() }
                     .buttonStyle(.borderedProminent)

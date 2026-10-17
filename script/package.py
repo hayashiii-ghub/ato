@@ -212,7 +212,7 @@ def create_appcast(archive, appcast, manifest, staging):
     archives.mkdir()
     run("/usr/bin/ditto", str(archive), str(archives / archive.name))
     prefix = os.environ.get("SPARKLE_DOWNLOAD_URL_PREFIX",
-                            f"https://github.com/hayashiii-ghub/usage-rings/releases/download/v{manifest['version']}/")
+                            f"https://github.com/hayashiii-ghub/ato/releases/download/v{manifest['version']}/")
     parsed = urlsplit(prefix)
     if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password or parsed.fragment:
         raise ValueError("Sparkle download prefix must be an HTTPS URL without credentials or a fragment.")
@@ -224,7 +224,7 @@ def create_appcast(archive, appcast, manifest, staging):
         '<channel><title>ato?</title></channel></rss>', encoding="utf-8",
     )
     args = [str(executable), "--download-url-prefix", prefix, "--maximum-deltas", "0",
-            "--link", "https://github.com/hayashiii-ghub/usage-rings/releases", "-o", str(appcast)]
+            "--link", "https://github.com/hayashiii-ghub/ato/releases", "-o", str(appcast)]
     private_key = os.environ.get("SPARKLE_ED_PRIVATE_KEY")
     if private_key:
         args += ["--ed-key-file", "-"]
@@ -255,7 +255,7 @@ def create_disk_image(app, staging, destination, mode):
         "per-app approval instructions: https://support.apple.com/102445\n"
         "Do not disable Gatekeeper or remove quarantine attributes.\n\n"
         "Claude Code status-line setup is optional and is not run automatically.\n"
-        "Instructions: https://github.com/hayashiii-ghub/usage-rings#accounts\n",
+        "Instructions: https://github.com/hayashiii-ghub/ato#accounts\n",
         encoding="utf-8",
     )
     run("/usr/bin/hdiutil", "create", "-volname", "ato?", "-srcfolder",
