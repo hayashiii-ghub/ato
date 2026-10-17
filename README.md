@@ -99,7 +99,7 @@ release instructions: [AGENTS.md](AGENTS.md). Licenses: [LICENSE](LICENSE) and
 
 ## Website
 
-The [public website](https://ato.hayashiii-gpt.chatgpt.site) is hosted on Sites.
+The [public website](https://ato.shigoto.dev) is hosted on Vercel.
 Its source lives in [`site/`](site), using Bun and TypeScript with static HTML/CSS.
 Python is used only by the app's setup, packaging, and tests.
 
@@ -110,6 +110,7 @@ bun run dev
 ```
 
 From the repository root, `make site-check` checks types and `make site-build`
-generates `site/dist/` for static hosting. Edit `site/src/` and `site/public/`;
+generates `site/dist/` for static hosting. Run `cd site && bun run test` to check
+the generated site. Edit `site/src/` and `site/public/`;
 the generated `dist/` is not tracked. Website commands are separate from the
 Swift app's build and installation commands.
