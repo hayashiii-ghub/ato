@@ -58,10 +58,10 @@ with `python3 script/claude-statusline-setup.py --uninstall`.
 
 ### Gemini helper
 
-This integration requires a source build until it is included in a release.
+Available in ato? 0.2.3 or later.
 ato? reads Antigravity's status line data without starting `agy`. Source installation
-connects the helper unless a custom status line exists. For manual setup after a
-source build, merge this into `~/.gemini/antigravity-cli/settings.json`, preserving
+connects the helper unless a custom status line exists. For downloads, merge this
+into `~/.gemini/antigravity-cli/settings.json`, preserving
 other settings and any existing custom command:
 
 ```json
