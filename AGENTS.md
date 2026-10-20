@@ -13,8 +13,11 @@ ask before adding other documentation. Keep the app independent of cc:.
   The CLI must not launch/enable the app, refresh providers, read credentials, or change settings.
 - Provider CLIs own sign-in. Do not add shell execution, login flows, or credential
   fallbacks. Never expose credentials/private keys in logs, caches, or assets.
+- Claude/Gemini use passive status line caches. Never launch Antigravity to poll usage.
+  Preserve custom status lines and unrelated settings during helper setup.
 - Unknown, failed, expired, or 20-minute-old usage is unavailable. Preserve actual
-  observation times; never infer a restored allowance. Keep README's security FAQ anchor.
+  observation times, including unchanged Gemini quota data; never infer a restored
+  allowance. Keep README's security FAQ anchor.
 - `site/` owns the website's Bun/TypeScript source and static assets. Edit `src/`
   and `public/`, not generated `dist/`. Vercel builds `site/` and publishes `dist/`
   at `https://ato.shigoto.dev` from `main`; pull requests get previews. Retain the

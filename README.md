@@ -26,6 +26,8 @@ Missing, failed, expired, or 20-minute-old readings show **—**.
 Monitoring refreshes every five minutes and after waking. Closing the window keeps
 it running; **Quit ato?** stops future polling, and reopening resumes it.
 An in-flight request may finish. Widget updates follow macOS scheduling.
+Claude and Gemini receive usage through CLI activity, so polling alone does not
+produce a new reading. Gemini quota data that stays unchanged for 20 minutes also shows **—**.
 
 ## Accounts
 
@@ -38,7 +40,7 @@ Grok enterprise allowances are unsupported.
 | Claude | Claude Code 2.1.251+ with Pro/Max and the optional helper below |
 | Cursor | Cursor desktop |
 | Grok | Cursor desktop account used by Grok |
-| Gemini | Antigravity CLI 1.1.11+ (`agy`) with Google, not Gemini CLI |
+| Gemini | Antigravity CLI 1.1.11+ (`agy`) with Google and the helper below; Gemini CLI is unsupported |
 
 ### Claude helper
 
@@ -54,6 +56,24 @@ For user Applications, replace `/Applications` with `$HOME/Applications`. Usage 
 To disconnect, remove only this invocation; remove source-installer setup
 with `python3 script/claude-statusline-setup.py --uninstall`.
 
+### Gemini helper
+
+This integration requires a source build until it is included in a release.
+ato? reads Antigravity's status line data without starting `agy`. Source installation
+connects the helper unless a custom status line exists. For manual setup after a
+source build, merge this into `~/.gemini/antigravity-cli/settings.json`, preserving
+other settings and any existing custom command:
+
+```json
+{"statusLine":{"type":"command","command":"\"/Applications/Usage Rings.app/Contents/Helpers/UsageRingsStatusline\" --provider gemini","stack_with_default":true}}
+```
+
+For user Applications, replace `/Applications` with `$HOME/Applications`. Usage
+arrives the next time you use Antigravity. If Gemini shows **—** before its first
+reading, connect this helper and use Antigravity to provide usage data.
+To disconnect, remove only this invocation; remove source-installer setup with
+`python3 script/antigravity-statusline-setup.py --uninstall`.
+
 ## CLI and AI skill
 
 ```sh
@@ -67,19 +87,20 @@ bundled [skill](Skills/usage-rings-budget/SKILL.md) from
 
 ## Security and data FAQ
 
-**Reads:** Codex/Gemini use their CLIs, which manage authentication/cache.
+**Reads:** Codex uses its CLI, which manages authentication/cache.
 Cursor/Grok read Cursor's session for HTTPS requests to `cursor.com` and `api2.cursor.sh`;
-redirects are rejected, and these internal endpoints may change. Claude reads only
-the helper's usage cache. No conversations, analytics, or usage go to the developer.
+redirects are rejected, and these internal endpoints may change. Claude/Gemini read
+only their helpers' usage caches; ato? does not launch Antigravity. No conversations,
+analytics, or usage go to the developer.
 
 **Local data:** Other local processes can read usage, times, and display settings at
-`127.0.0.1:52388/v1/usage`; no credentials are exposed. The widget cache and Claude's
-`~/Library/Caches/Usage Rings/` cache are owner-only; there is no history/cloud sync.
+`127.0.0.1:52388/v1/usage`; no credentials are exposed. The widget cache and the helpers'
+`~/Library/Caches/Usage Rings/` caches are owner-only; there is no history/cloud sync.
 Claude session identifiers are hashed. Sharing CLI output with an AI shares those
 values with its service. Update checks contact GitHub separately.
 
 **Consent:** No provider reads occur before consent; an older saved Off choice requires
-consent again. Disconnect the Claude helper separately when stopping. macOS may retain
+consent again. Disconnect the Claude/Gemini helpers separately when stopping. macOS may retain
 the widget cache. A reset never implies a full allowance.
 
 ## Build from source
@@ -93,7 +114,7 @@ APP_VERSION="$app_version" APP_BUILD="$app_build" make install
 ```
 
 This builds/verifies, replaces `~/Applications/Usage Rings.app`, restarts its widget,
-and opens the app. Custom Claude status lines are preserved. Development and
+and opens the app. Custom Claude/Antigravity status lines are preserved. Development and
 release instructions: [AGENTS.md](AGENTS.md). Licenses: [LICENSE](LICENSE) and
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 

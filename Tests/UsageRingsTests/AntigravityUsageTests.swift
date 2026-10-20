@@ -1,4 +1,3 @@
-import Darwin
 import Foundation
 import Testing
 import UsageCore
@@ -7,219 +6,278 @@ import UsageCore
 struct AntigravityUsageTests {
     private let now = Date(timeIntervalSince1970: 1_800_000_000)
 
-    @Test func geminiQuotaUsesTheMostConstrainedWindowAndDropsPrivateMetadata() throws {
+    @Test func officialStatuslineQuotaUsesTheMostConstrainedGeminiWindow() throws {
         let usage = try AntigravityUsageParser.parse(payload(), now: now)
         #expect(usage.service == .gemini)
-        #expect(usage.windows.count == 2)
+        #expect(usage.windows.map(\.period) == [.fiveHours, .week])
         #expect(usage.headline?.title == "Week")
         #expect(abs((usage.remainingPercent(at: now) ?? 0) - 45.6) < 0.000_001)
-        #expect(usage.windows.allSatisfy { $0.id.hasPrefix("gemini-") && $0.resetsAt != nil })
-        let serialized = String(decoding: try JSONEncoder().encode(usage), as: UTF8.self)
-        #expect(!serialized.contains("synthetic-private"))
-        #expect(!serialized.contains("3p-"))
-        #expect(!serialized.contains("credits"))
-        #expect(!serialized.contains("conversation"))
+        #expect(usage.updatedAt == now)
+        #expect(usage.remainingPercent(at: now.addingTimeInterval(UsageSnapshot.maximumAge)) == nil)
     }
 
-    @Test func passedResetMakesEvenAFullBucketUnknown() throws {
-        let expired = #"{"id":"gemini-5h","window":"5h","remaining_fraction":1,"reset_time":"2027-01-15T07:59:59Z"}"#
-        let usage = try AntigravityUsageParser.parse(payload(buckets: expired), now: now)
+    @Test func passedResetDoesNotRestoreEvenAnExplicitFullBucket() throws {
+        let quota = #""gemini-5h":{"remaining_fraction":1,"reset_time":"2027-01-15T07:59:59Z"}"#
+        let usage = try AntigravityUsageParser.parse(payload(quota: quota), now: now)
+        #expect(usage.windows.count == 1)
         #expect(usage.remainingPercent(at: now) == nil)
     }
 
     @Test func missingDisabledMalformedAndThirdPartyQuotasNeverBecomeFullGemini() throws {
-        for bucket in [
-            #"{"id":"gemini-weekly","window":"weekly"}"#,
-            #"{"id":"gemini-weekly","window":"weekly","remaining_fraction":-0.1,"reset_time":"2027-02-01T12:00:00Z"}"#,
-            #"{"id":"gemini-weekly","window":"weekly","remaining_fraction":1.1,"reset_time":"2027-02-01T12:00:00Z"}"#,
-            #"{"id":"gemini-weekly","window":"weekly","remaining_fraction":true,"reset_time":"2027-02-01T12:00:00Z"}"#,
-            #"{"id":"gemini-weekly","window":"weekly","remaining_fraction":0.5,"reset_time":"invalid"}"#,
-            #"{"id":"gemini-weekly","window":"weekly","remaining_fraction":0.5}"#,
-            #"{"id":"gemini-unknown","window":"unknown","remaining_fraction":1,"reset_time":"2027-02-01T12:00:00Z"}"#,
-            #"{"id":"3p-weekly","window":"weekly","remaining_fraction":0.5,"reset_time":"2027-02-01T12:00:00Z"}"#
+        for quota in [
+            "",
+            #""gemini-weekly":{}"#,
+            #""gemini-weekly":{"remaining_fraction":null}"#,
+            #""gemini-weekly":{"remaining_fraction":-0.1,"reset_time":"2027-02-01T12:00:00Z"}"#,
+            #""gemini-weekly":{"remaining_fraction":1.1,"reset_time":"2027-02-01T12:00:00Z"}"#,
+            #""gemini-weekly":{"remaining_fraction":true,"reset_time":"2027-02-01T12:00:00Z"}"#,
+            #""gemini-weekly":{"remaining_fraction":0.5,"reset_time":"invalid"}"#,
+            #""gemini-weekly":{"remaining_fraction":0.5}"#,
+            #""gemini-weekly":{"remaining_fraction":0.5,"reset_in_seconds":3600}"#,
+            #""gemini-unknown":{"remaining_fraction":1,"reset_time":"2027-02-01T12:00:00Z"}"#,
+            #""3p-weekly":{"remaining_fraction":0.5,"reset_time":"2027-02-01T12:00:00Z"}"#
         ] {
-            #expect(throws: (any Error).self) { try AntigravityUsageParser.parse(payload(buckets: bucket), now: now) }
+            #expect(throws: (any Error).self) { try AntigravityUsageParser.parse(payload(quota: quota), now: now) }
         }
-        #expect(throws: (any Error).self) { try AntigravityUsageParser.parse(Data("{}".utf8)) }
-        #expect(throws: (any Error).self) { try AntigravityUsageParser.parse(payload(group: "Claude and GPT models")) }
+        for invalid in ["{}", #"{"product":"other","quota":{}}"#,
+                        #"{"product":"antigravity","quota":null}"#] {
+            #expect(throws: (any Error).self) { try AntigravityUsageParser.parse(Data(invalid.utf8), now: now) }
+        }
+        let wrongProduct = String(decoding: payload(), as: UTF8.self)
+            .replacingOccurrences(of: #""product":"antigravity""#, with: #""product":"other""#)
+        #expect(throws: (any Error).self) { try AntigravityUsageParser.parse(Data(wrongProduct.utf8), now: now) }
     }
 
-    @Test func activeWeeklyQuotaSurvivesAnExplicitlyDisabledFiveHourBucket() throws {
-        let buckets = #"{"id":"gemini-weekly","window":"weekly","remaining_fraction":0,"reset_time":"2027-02-01T12:00:00.125Z"},{"id":"gemini-5h","window":"5h"}"#
-        let usage = try AntigravityUsageParser.parse(payload(buckets: buckets), now: now)
+    @Test func activeWeeklyQuotaSurvivesADisabledFiveHourBucketAndUnknownFields() throws {
+        let quota = #""gemini-weekly":{"remaining_fraction":0,"reset_time":"2027-02-01T12:00:00.125Z"},"gemini-5h":{},"3p-weekly":{"remaining_fraction":0.99},"future-quota":"unknown""#
+        let usage = try AntigravityUsageParser.parse(payload(quota: quota), now: now)
         #expect(usage.windows.count == 1)
         #expect(usage.remainingPercent(at: now) == 0)
         #expect(usage.headline?.resetsAt == Date(timeIntervalSince1970: 1_801_483_200.125))
     }
 
-    @Test func rejectsAnAgentTurnAndAmbiguousOrWrongCommandResults() throws {
-        let valid = String(decoding: payload(), as: UTF8.self)
-        for invalid in [
-            valid.replacingOccurrences(of: #""status":"SUCCESS""#, with: #""status":"ERROR""#),
-            valid.replacingOccurrences(of: #""num_turns":0"#, with: #""num_turns":1"#),
-            valid.replacingOccurrences(of: #""total_tokens":0"#, with: #""total_tokens":2"#),
-            valid.replacingOccurrences(of: #""name":"usage""#, with: #""name":"credits""#)
-        ] {
-            #expect(throws: (any Error).self) { try AntigravityUsageParser.parse(Data(invalid.utf8)) }
-        }
-        let bucket = #"{"id":"gemini-weekly","window":"weekly","remaining_fraction":0.5,"reset_time":"2027-02-01T12:00:00Z"}"#
-        #expect(throws: (any Error).self) { try AntigravityUsageParser.parse(payload(buckets: "\(bucket),\(bucket)")) }
-        #expect(try AntigravityUsageParser.parse(Data(valid.replacingOccurrences(of: #""name":"usage""#, with: #""name":"/usage""#).utf8)).service == .gemini)
-    }
-
-    @Test func fixedCLILocationsAndVersionGateCannotStartOldAgents() {
-        let home = URL(fileURLWithPath: "/synthetic/home")
-        var checked: [String] = []
-        let executable = AntigravityUsageClient.executable(home: home) {
-            checked.append($0)
-            return $0 == "/synthetic/home/.local/bin/agy"
-        }
-        #expect(executable?.path == "/synthetic/home/.local/bin/agy")
-        #expect(checked == ["/opt/homebrew/bin/agy", "/usr/local/bin/agy", "/synthetic/home/.local/bin/agy"])
-        for value in ["1.1.11\n", "1.3.4", "2.0.0"] {
-            #expect(AntigravityUsageClient.supportedVersion(Data(value.utf8)))
-        }
-        for value in ["1.1.10", "1.0.99", "0.99.0", "1.3.4-beta", "1.3.4\nprivate", "1.99999999999999999999999.0"] {
-            #expect(!AntigravityUsageClient.supportedVersion(Data(value.utf8)))
-        }
-    }
-
-    @Test func versionProbeRejectsUnsupportedCLIWithoutStartingUsage() async throws {
-        let fixture = try Fixture("normal", version: "1.1.10")
+    @Test func passiveClientReadsOnlyItsCacheAndMissingCacheRequiresSetup() async throws {
+        let fixture = Fixture()
         defer { fixture.remove() }
-        await #expect(throws: AntigravityUsageError.unsupportedCLI) { try await fixture.read() }
-        #expect(!FileManager.default.fileExists(atPath: fixture.record.path))
+        let missing = await AntigravityUsageClient.fetch(from: fixture.location)
+        #expect(missing.service == .gemini && missing.state == .setupRequired && missing.windows.isEmpty)
+        #expect(!FileManager.default.fileExists(atPath: fixture.folder.path))
+
+        let usage = try AntigravityUsageParser.parse(payload(), now: now)
+        try AntigravityStatuslineFile.write(usage, to: fixture.location)
+        #expect(await AntigravityUsageClient.fetch(from: fixture.location) == usage)
     }
 
-    @Test func boundedNativeUsageHandlesFragmentedOutputWithoutAgentEnvironment() async throws {
-        let fixture = try Fixture("fragmented")
+    @Test func cacheDropsPrivateMetadataAndUsesOwnerOnlyPermissions() throws {
+        let fixture = Fixture()
         defer { fixture.remove() }
-        let usage = try await fixture.read()
-        #expect(usage.service == .gemini && usage.windows.count == 1)
-        #expect(try fixture.processIsGone())
-        #expect(try fixture.temporaryCWDIsGone())
+        let usage = try AntigravityUsageParser.parse(payload(), now: now)
+        try AntigravityStatuslineFile.write(usage, to: fixture.location)
+        let saved = try String(contentsOf: fixture.location, encoding: .utf8)
+        for forbidden in ["synthetic-private", "conversation", "session", "email", "workspace", "transcript",
+                          "context_window", "total_input_tokens", "reset_in_seconds", "credits", "3p-", "product"] {
+            #expect(!saved.contains(forbidden))
+        }
+        let fileAttributes = try FileManager.default.attributesOfItem(atPath: fixture.location.path)
+        let folderAttributes = try FileManager.default.attributesOfItem(atPath: fixture.folder.path)
+        #expect((fileAttributes[.posixPermissions] as? NSNumber)?.intValue == 0o600)
+        #expect((folderAttributes[.posixPermissions] as? NSNumber)?.intValue == 0o700)
     }
 
-    @Test func oversizedAndFailedNativeOutputNeverBecomesUsage() async throws {
-        for scenario in ["oversized", "nonzero", "invalid"] {
-            let fixture = try Fixture(scenario)
-            defer { fixture.remove() }
-            await #expect(throws: (any Error).self) { try await fixture.read() }
-            #expect(try fixture.processIsGone())
-            #expect(try fixture.temporaryCWDIsGone())
+    @Test func uiRedrawsSessionChangesAndCountdownsDoNotRenewOldQuota() throws {
+        let fixture = Fixture()
+        defer { fixture.remove() }
+        let first = try AntigravityUsageParser.parse(payload(), now: now)
+        try AntigravityStatuslineFile.write(first, to: fixture.location)
+        let redraw = String(decoding: payload(), as: UTF8.self)
+            .replacingOccurrences(of: "synthetic-private-session", with: "another-private-session")
+            .replacingOccurrences(of: #""reset_in_seconds":3600"#, with: #""reset_in_seconds":2300"#)
+            .replacingOccurrences(of: #""total_input_tokens":1"#, with: #""total_input_tokens":2000"#)
+            .replacingOccurrences(of: #""agent_state":"idle""#, with: #""agent_state":"working""#)
+        let repeated = try AntigravityUsageParser.parse(Data(redraw.utf8), now: now.addingTimeInterval(1300))
+        let after = try AntigravityStatuslineFile.write(repeated, to: fixture.location)
+        #expect(after.usage == first)
+        #expect(after.usage.remainingPercent(at: now.addingTimeInterval(1300)) == nil)
+    }
+
+    @Test func replayingAnEarlierQuotaCannotUndoOrRenewTheLatestReading() throws {
+        let fixture = Fixture()
+        defer { fixture.remove() }
+        let first = try AntigravityUsageParser.parse(payload(), now: now)
+        try AntigravityStatuslineFile.write(first, to: fixture.location)
+        let changed = String(decoding: payload(), as: UTF8.self)
+            .replacingOccurrences(of: "0.456", with: "0.25")
+        let second = try AntigravityUsageParser.parse(Data(changed.utf8), now: now.addingTimeInterval(10))
+        try AntigravityStatuslineFile.write(second, to: fixture.location)
+        let replay = try AntigravityUsageParser.parse(payload(), now: now.addingTimeInterval(1300))
+        let after = try AntigravityStatuslineFile.write(replay, to: fixture.location)
+        #expect(after.usage == second)
+        #expect(after.usage.remainingPercent(at: now.addingTimeInterval(1300)) == nil)
+    }
+
+    @Test func aDelayedUnseenWriterCannotReplaceNewerUsage() throws {
+        let fixture = Fixture()
+        defer { fixture.remove() }
+        let newest = try AntigravityUsageParser.parse(payload(), now: now.addingTimeInterval(10))
+        try AntigravityStatuslineFile.write(newest, to: fixture.location)
+        let delayedPayload = String(decoding: payload(), as: UTF8.self).replacingOccurrences(of: "0.456", with: "0.9")
+        let delayed = try AntigravityUsageParser.parse(Data(delayedPayload.utf8), now: now)
+        #expect(try AntigravityStatuslineFile.write(delayed, to: fixture.location).usage == newest)
+        let redraw = try AntigravityUsageParser.parse(Data(delayedPayload.utf8), now: now.addingTimeInterval(1300))
+        let after = try AntigravityStatuslineFile.write(redraw, to: fixture.location)
+        #expect(after.usage == newest)
+        #expect(after.usage.remainingPercent(at: now.addingTimeInterval(1300)) == nil)
+    }
+
+    @Test func aResetNeedsAnExplicitNewQuotaReading() throws {
+        let fixture = Fixture()
+        defer { fixture.remove() }
+        let oldQuota = #""gemini-5h":{"remaining_fraction":0,"reset_time":"2027-01-15T08:00:10Z"}"#
+        let exhausted = try AntigravityUsageParser.parse(payload(quota: oldQuota), now: now)
+        try AntigravityStatuslineFile.write(exhausted, to: fixture.location)
+        #expect(AntigravityStatuslineFile.read(from: fixture.location)?.usage.remainingPercent(at: now.addingTimeInterval(11)) == nil)
+
+        let newQuota = #""gemini-5h":{"remaining_fraction":0.8,"reset_time":"2027-01-15T13:00:10Z"}"#
+        let observed = try AntigravityUsageParser.parse(payload(quota: newQuota), now: now.addingTimeInterval(11))
+        let cache = try AntigravityStatuslineFile.write(observed, to: fixture.location)
+        #expect(abs((cache.usage.remainingPercent(at: now.addingTimeInterval(11)) ?? 0) - 80) < 0.000_001)
+        #expect(cache.usage.updatedAt == now.addingTimeInterval(11))
+    }
+
+    @Test func malformedOversizedAndWrongProviderCachesRequireSetup() async throws {
+        let fixture = Fixture()
+        defer { fixture.remove() }
+        let usage = try AntigravityUsageParser.parse(payload(), now: now)
+        let cache = try AntigravityStatuslineFile.write(usage, to: fixture.location)
+        let original = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(cache)) as? [String: Any])
+        var invalidObjects: [[String: Any]] = []
+        var wrongProvider = original
+        var wrongUsage = try #require(original["usage"] as? [String: Any])
+        wrongUsage["service"] = "codex"
+        wrongProvider["usage"] = wrongUsage
+        invalidObjects.append(wrongProvider)
+        var wrongVersion = original
+        wrongVersion["version"] = 2
+        invalidObjects.append(wrongVersion)
+        var excessiveMarkers = original
+        excessiveMarkers["quotaMarkers"] = Array(repeating: String(repeating: "a", count: 64), count: 257)
+        invalidObjects.append(excessiveMarkers)
+        var malformedMarker = original
+        malformedMarker["quotaMarkers"] = ["synthetic-private"]
+        invalidObjects.append(malformedMarker)
+        var badWindow = original
+        var invalidUsage = try #require(original["usage"] as? [String: Any])
+        var windows = try #require(invalidUsage["windows"] as? [[String: Any]])
+        windows[0]["usedPercent"] = 101
+        invalidUsage["windows"] = windows
+        badWindow["usage"] = invalidUsage
+        invalidObjects.append(badWindow)
+
+        let invalidData = try invalidObjects.map { try JSONSerialization.data(withJSONObject: $0) }
+            + [Data("broken".utf8), Data(repeating: 0x20, count: 65_537)]
+        for data in invalidData {
+            try data.write(to: fixture.location)
+            #expect(AntigravityStatuslineFile.read(from: fixture.location) == nil)
+            #expect(await AntigravityUsageClient.fetch(from: fixture.location).state == .setupRequired)
         }
     }
 
-    @Test func timeoutStopsTheOwnedProcessAndDescendantBeforeReturning() async throws {
-        let fixture = try Fixture("hangWithChild")
+    @Test func concurrentWritersPreserveTheLatestObservation() async throws {
+        let fixture = Fixture()
         defer { fixture.remove() }
-        await #expect(throws: AntigravityUsageError.timedOut) { try await fixture.read(timeout: 0.3) }
-        #expect(try fixture.processIsGone())
-        #expect(try fixture.temporaryCWDIsGone())
-        let child = try #require(try fixture.childPID())
-        for _ in 0..<100 where kill(child, 0) == 0 { try await Task.sleep(for: .milliseconds(5)) }
-        #expect(kill(child, 0) == -1 && errno == ESRCH)
-    }
-
-    @Test func cancelledUsageStopsAndReapsItsChild() async throws {
-        let fixture = try Fixture("hang")
-        defer { fixture.remove() }
-        let task = Task { try await fixture.read() }
-        for _ in 0..<100 where !FileManager.default.fileExists(atPath: fixture.record.path) {
-            try await Task.sleep(for: .milliseconds(10))
+        let readings = try (0..<24).map { index in
+            let quota = "\"gemini-weekly\":{\"remaining_fraction\":\(Double(index) / 100),\"reset_time\":\"2027-02-01T12:00:00Z\"}"
+            return try AntigravityUsageParser.parse(payload(quota: quota), now: now.addingTimeInterval(Double(index)))
         }
-        #expect(FileManager.default.fileExists(atPath: fixture.record.path))
-        task.cancel()
-        await #expect(throws: CancellationError.self) { try await task.value }
-        #expect(try fixture.processIsGone())
-        #expect(try fixture.temporaryCWDIsGone())
-    }
-
-    @Test func anAlreadyCancelledReadCannotLaunchAChild() async throws {
-        let fixture = try Fixture("normal")
-        defer { fixture.remove() }
-        let task = Task {
-            withUnsafeCurrentTask { $0?.cancel() }
-            return try await fixture.read()
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            for usage in readings.reversed() {
+                group.addTask { _ = try AntigravityStatuslineFile.write(usage, to: fixture.location) }
+            }
+            try await group.waitForAll()
         }
-        await #expect(throws: CancellationError.self) { try await task.value }
-        #expect(!FileManager.default.fileExists(atPath: fixture.record.path))
+        #expect(AntigravityStatuslineFile.read(from: fixture.location)?.usage == readings.last)
     }
 
-    private func payload(buckets: String = #"{"id":"gemini-weekly","window":"weekly","remaining_fraction":0.456,"reset_time":"2027-02-01T12:00:00Z"},{"id":"gemini-5h","window":"5h","remaining_fraction":0.9,"reset_time":"2027-02-01T12:00:00Z"}"#,
-                         group: String = "Gemini Models") -> Data {
+    @Test func fullHistoryKeepsOldQuotaUnavailableUntilItsReset() throws {
+        let fixture = Fixture()
+        defer { fixture.remove() }
+        let reset = now.addingTimeInterval(3600)
+        var lastAccepted: ServiceUsage?
+        for index in 0..<260 {
+            let reading = try usage(fraction: Double(index) / 1000, reset: reset,
+                                    observedAt: now.addingTimeInterval(Double(index)))
+            try AntigravityStatuslineFile.write(reading, to: fixture.location)
+            if index == 255 { lastAccepted = reading }
+        }
+        let cache = try #require(AntigravityStatuslineFile.read(from: fixture.location))
+        #expect(cache.usage == lastAccepted)
+        #expect(cache.quotaMarkers.count == 256)
+        #expect(cache.usage.remainingPercent(at: now.addingTimeInterval(1600)) == nil)
+        #expect(try Data(contentsOf: fixture.location).count <= 65_536)
+
+        let renewed = try usage(fraction: 0.8, reset: reset.addingTimeInterval(3600),
+                                observedAt: reset.addingTimeInterval(1))
+        let afterReset = try AntigravityStatuslineFile.write(renewed, to: fixture.location)
+        #expect(afterReset.usage == renewed)
+        #expect(afterReset.quotaMarkers.count == 1)
+    }
+
+    @Test func fullHistoryPreservesLongerAndRejectedQuotaResetHorizons() throws {
+        let fixture = Fixture()
+        defer { fixture.remove() }
+        let hourReset = now.addingTimeInterval(3600)
+        let weekReset = now.addingTimeInterval(7 * 24 * 3600)
+        let weekly = try usage(fraction: 0.5, reset: weekReset, observedAt: now)
+        try AntigravityStatuslineFile.write(weekly, to: fixture.location)
+        var lastAccepted = weekly
+        for index in 1..<256 {
+            lastAccepted = try usage(id: "gemini-5h", fraction: Double(index) / 1000, reset: hourReset,
+                                     observedAt: now.addingTimeInterval(Double(index)))
+            try AntigravityStatuslineFile.write(lastAccepted, to: fixture.location)
+        }
+        #expect(AntigravityStatuslineFile.read(from: fixture.location)?.quotaHistoryExpiresAt == weekReset)
+
+        let afterHour = try usage(id: "gemini-5h", fraction: 0.6, reset: hourReset.addingTimeInterval(3600),
+                                  observedAt: hourReset.addingTimeInterval(1))
+        #expect(try AntigravityStatuslineFile.write(afterHour, to: fixture.location).usage == lastAccepted)
+        let weeklyRedraw = try usage(fraction: 0.5, reset: weekReset, observedAt: hourReset.addingTimeInterval(2))
+        let afterRedraw = try AntigravityStatuslineFile.write(weeklyRedraw, to: fixture.location)
+        #expect(afterRedraw.usage == lastAccepted)
+        #expect(afterRedraw.usage.remainingPercent(at: hourReset.addingTimeInterval(2)) == nil)
+
+        let extendedReset = weekReset.addingTimeInterval(24 * 3600)
+        let rejected = try usage(fraction: 0.7, reset: extendedReset, observedAt: hourReset.addingTimeInterval(3))
+        let afterRejection = try AntigravityStatuslineFile.write(rejected, to: fixture.location)
+        #expect(afterRejection.usage == lastAccepted)
+        #expect(afterRejection.quotaHistoryExpiresAt == extendedReset)
+        let rejectedRedraw = try usage(fraction: 0.7, reset: extendedReset, observedAt: weekReset.addingTimeInterval(1))
+        let afterRejectedRedraw = try AntigravityStatuslineFile.write(rejectedRedraw, to: fixture.location)
+        #expect(afterRejectedRedraw.usage == lastAccepted)
+        #expect(afterRejectedRedraw.usage.remainingPercent(at: weekReset.addingTimeInterval(1)) == nil)
+
+        let renewed = try usage(fraction: 0.9, reset: extendedReset.addingTimeInterval(7 * 24 * 3600),
+                                observedAt: extendedReset.addingTimeInterval(1))
+        let afterReset = try AntigravityStatuslineFile.write(renewed, to: fixture.location)
+        #expect(afterReset.usage == renewed)
+        #expect(afterReset.quotaMarkers.count == 1)
+    }
+
+    private func usage(id: String = "gemini-weekly", fraction: Double, reset: Date,
+                       observedAt: Date) throws -> ServiceUsage {
+        let timestamp = ISO8601DateFormatter().string(from: reset)
+        let quota = "\"\(id)\":{\"remaining_fraction\":\(fraction),\"reset_time\":\"\(timestamp)\"}"
+        return try AntigravityUsageParser.parse(payload(quota: quota), now: observedAt)
+    }
+
+    private func payload(quota: String = #""gemini-weekly":{"remaining_fraction":0.456,"reset_time":"2027-02-01T12:00:00Z","reset_in_seconds":3600},"gemini-5h":{"remaining_fraction":0.9,"reset_time":"2027-02-01T12:00:00Z"},"3p-weekly":{"remaining_fraction":0.01,"reset_time":"2027-02-01T12:00:00Z"}"#) -> Data {
         Data("""
-        {"status":"SUCCESS","num_turns":0,"conversation_id":"synthetic-private-conversation","email":"synthetic-private@example.com", "usage":{"input_tokens":0,"output_tokens":0,"thinking_tokens":0,"cache_read_tokens":0,"total_tokens":0},"command":{"name":"usage","data":{"credits":"synthetic-private-credit","description":"synthetic-private-project","groups":[{"name":"\(group)","buckets":[\(buckets)]},{"name":"Claude and GPT models","buckets":[{"id":"3p-weekly","window":"weekly","remaining_fraction":0.01,"reset_time":"2027-02-01T12:00:00Z"}]}]}}}
+        {"product":"antigravity","quota":{\(quota)},"conversation_id":"synthetic-private-conversation","session_id":"synthetic-private-session","email":"synthetic-private@example.com","workspace":{"current_dir":"/synthetic-private/workspace"},"transcript_path":"/synthetic-private/transcript.jsonl","context_window":{"total_input_tokens":1},"credits":"synthetic-private-credit","agent_state":"idle"}
         """.utf8)
     }
 
-    private struct Fixture {
-        let folder: URL
-        let script: URL
-        let record: URL
-        let scenario: String
-        let version: String
-
-        init(_ scenario: String, version: String = "1.3.4") throws {
-            self.scenario = scenario
-            self.version = version
-            folder = FileManager.default.temporaryDirectory.appendingPathComponent("usage-rings-fake-agy-\(UUID().uuidString)")
-            script = folder.appendingPathComponent("cli.py")
-            record = folder.appendingPathComponent("record.json")
-            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
-            try Self.program.write(to: script, atomically: true, encoding: .utf8)
-        }
-
-        func read(timeout: TimeInterval = 3) async throws -> ServiceUsage {
-            try await AntigravityUsageClient.read(executable: URL(fileURLWithPath: "/usr/bin/python3"),
-                arguments: [script.path, scenario, record.path] + AntigravityUsageClient.usageArguments,
-                versionArguments: [script.path, "version", version], timeout: timeout)
-        }
-
+    private struct Fixture: Sendable {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("usage-rings-gemini-statusline-\(UUID().uuidString)")
+        var location: URL { folder.appendingPathComponent("usage.json") }
         func remove() { try? FileManager.default.removeItem(at: folder) }
-        func recorded() throws -> [String: Any] { try JSONSerialization.jsonObject(with: Data(contentsOf: record)) as! [String: Any] }
-        func processIsGone() throws -> Bool {
-            let pid = try (recorded()["pid"] as! NSNumber).int32Value
-            return kill(pid, 0) == -1 && errno == ESRCH
-        }
-        func temporaryCWDIsGone() throws -> Bool { try !FileManager.default.fileExists(atPath: recorded()["cwd"] as! String) }
-        func childPID() throws -> pid_t? { try (recorded()["child"] as? NSNumber)?.int32Value }
-
-        private static let program = #"""
-import json, os, signal, subprocess, sys, time
-assert os.environ.get('AGY_CLI_DISABLE_AUTO_UPDATE') == 'true'
-assert not any(k in os.environ for k in ('GEMINI_API_KEY', 'GOOGLE_API_KEY', 'GOOGLE_APPLICATION_CREDENTIALS', 'ANTIGRAVITY_CONVERSATION_ID'))
-assert not sys.stdin.isatty() and not sys.stdout.isatty()
-assert sys.stdin.read() == ''
-assert os.listdir(os.getcwd()) == []
-scenario = sys.argv[1]
-if scenario == 'version':
-    print(sys.argv[2], flush=True)
-    sys.exit(0)
-assert sys.argv[3:] == ['--print', '/usage', '--output-format', 'json', '--log-file', '/dev/null']
-record = {'pid': os.getpid(), 'cwd': os.getcwd()}
-signal.signal(signal.SIGTERM, signal.SIG_IGN)
-if scenario == 'hangWithChild':
-    child = subprocess.Popen(['/usr/bin/python3', '-c', 'import signal,time; signal.signal(signal.SIGTERM, signal.SIG_IGN); time.sleep(60)'])
-    record['child'] = child.pid
-with open(sys.argv[2], 'w') as f: json.dump(record, f)
-if scenario in ('hang', 'hangWithChild'): time.sleep(60)
-if scenario == 'oversized':
-    print('x' * 70000, flush=True)
-    time.sleep(60)
-if scenario == 'invalid':
-    print('synthetic-private-invalid-data', flush=True)
-    sys.exit(0)
-data = {'status': 'SUCCESS', 'num_turns': 0, 'usage': {key: 0 for key in ('input_tokens', 'output_tokens', 'thinking_tokens', 'cache_read_tokens', 'total_tokens')}, 'command': {'name': 'usage', 'data': {'groups': [{'name': 'Gemini Models', 'buckets': [{'id': 'gemini-weekly', 'window': 'weekly', 'remaining_fraction': 0.75, 'reset_time': '2027-02-01T12:00:00Z'}]}]}}}
-text = json.dumps(data) + '\n'
-sys.stderr.write('synthetic-private-stderr' * 50000)
-sys.stderr.flush()
-if scenario == 'fragmented':
-    for i in range(0, len(text), 7):
-        sys.stdout.write(text[i:i+7]); sys.stdout.flush()
-else:
-    print(text, end='', flush=True)
-sys.exit(1 if scenario == 'nonzero' else 0)
-"""#
     }
 }

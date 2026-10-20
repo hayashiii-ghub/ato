@@ -152,7 +152,7 @@ struct WindowSelectionTests {
         ])
         #expect(try ClaudeStatusline.parse(claude, now: now)?.usage.windows.map(\.period) == [.fiveHours, .week])
         let gemini = Data(#"""
-        {"status":"SUCCESS","num_turns":0,"usage":{"input_tokens":0,"output_tokens":0,"thinking_tokens":0,"cache_read_tokens":0,"total_tokens":0},"command":{"name":"usage","data":{"groups":[{"name":"Gemini Models","buckets":[{"id":"gemini-5h","window":"5h","remaining_fraction":0.9,"reset_time":"2027-02-01T12:00:00Z"},{"id":"gemini-weekly","window":"weekly","remaining_fraction":0.3,"reset_time":"2027-02-01T12:00:00Z"}]}]}}}
+        {"product":"antigravity","quota":{"gemini-5h":{"remaining_fraction":0.9,"reset_time":"2027-02-01T12:00:00Z"},"gemini-weekly":{"remaining_fraction":0.3,"reset_time":"2027-02-01T12:00:00Z"}}}
         """#.utf8)
         #expect(try AntigravityUsageParser.parse(gemini, now: now).windows.map(\.period) == [.fiveHours, .week])
         let grok = Data(#"{"usagePercent":25,"nextResetTimestampUtc":"2027-02-01T12:00:00Z","hasNonZeroIncludedLimit":true}"#.utf8)
