@@ -47,23 +47,17 @@ public enum AntigravityStatuslineFile {
         encoder.outputFormatting = .sortedKeys
         let normalized = usage.windows.sorted { $0.id < $1.id }
         let marker = SHA256.hash(data: try encoder.encode(normalized)).map { String(format: "%02x", $0) }.joined()
-        // Redraws and older sessions can replay quotas. Their arrival is not a new observation.
-        if let previous, previous.quotaMarkers.contains(marker) { return previous }
-        var markers = previous?.quotaMarkers ?? []
-        var historyExpiresAt = max(previous?.quotaHistoryExpiresAt ?? quotaReset, quotaReset)
-        var acceptsUsage = true
-        if markers.count == 256, let previous {
-            // Evicting a live marker would let an old session renew a stale allowance.
-            if previous.quotaHistoryExpiresAt <= observedAt {
-                markers = []
-                historyExpiresAt = quotaReset
-            } else {
-                acceptsUsage = false
-            }
+        // Delayed writers can evict the current marker, so compare the current quota independently.
+        if let previous, previous.usage.windows.sorted(by: { $0.id < $1.id }) == normalized
+            || previous.quotaMarkers.contains(marker) {
+            return previous
         }
-        if acceptsUsage { markers.append(marker) }
+        // The payload has no source timestamp; replay detection is limited to recent quotas.
+        let markers = Array(((previous?.quotaMarkers ?? []) + [marker]).suffix(256))
+        // Retain the v1 reset horizon for installed readers, without gating new observations.
+        let historyExpiresAt = max(previous?.quotaHistoryExpiresAt ?? quotaReset, quotaReset)
         var current = usage
-        if let previous, let previousTime = previous.usage.updatedAt, !acceptsUsage || observedAt < previousTime {
+        if let previous, let previousTime = previous.usage.updatedAt, observedAt < previousTime {
             current = previous.usage
         }
         let cache = AntigravityStatuslineCache(usage: current, quotaMarkers: markers,

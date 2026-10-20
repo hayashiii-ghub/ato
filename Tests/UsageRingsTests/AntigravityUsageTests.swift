@@ -198,19 +198,19 @@ struct AntigravityUsageTests {
         #expect(AntigravityStatuslineFile.read(from: fixture.location)?.usage == readings.last)
     }
 
-    @Test func fullHistoryKeepsOldQuotaUnavailableUntilItsReset() throws {
+    @Test func fullHistoryKeepsAcceptingQuotasBeforeAndAfterTheirReset() throws {
         let fixture = Fixture()
         defer { fixture.remove() }
         let reset = now.addingTimeInterval(3600)
-        var lastAccepted: ServiceUsage?
+        var latest: ServiceUsage?
         for index in 0..<260 {
             let reading = try usage(fraction: Double(index) / 1000, reset: reset,
                                     observedAt: now.addingTimeInterval(Double(index)))
             try AntigravityStatuslineFile.write(reading, to: fixture.location)
-            if index == 255 { lastAccepted = reading }
+            latest = reading
         }
         let cache = try #require(AntigravityStatuslineFile.read(from: fixture.location))
-        #expect(cache.usage == lastAccepted)
+        #expect(cache.usage == latest)
         #expect(cache.quotaMarkers.count == 256)
         #expect(cache.usage.remainingPercent(at: now.addingTimeInterval(1600)) == nil)
         #expect(try Data(contentsOf: fixture.location).count <= 65_536)
@@ -219,47 +219,42 @@ struct AntigravityUsageTests {
                                 observedAt: reset.addingTimeInterval(1))
         let afterReset = try AntigravityStatuslineFile.write(renewed, to: fixture.location)
         #expect(afterReset.usage == renewed)
-        #expect(afterReset.quotaMarkers.count == 1)
+        #expect(afterReset.quotaMarkers.count == 256)
     }
 
-    @Test func fullHistoryPreservesLongerAndRejectedQuotaResetHorizons() throws {
+    @Test func fullHistoryAcceptsNewQuotasAcrossDifferentResetHorizons() throws {
         let fixture = Fixture()
         defer { fixture.remove() }
         let hourReset = now.addingTimeInterval(3600)
         let weekReset = now.addingTimeInterval(7 * 24 * 3600)
         let weekly = try usage(fraction: 0.5, reset: weekReset, observedAt: now)
         try AntigravityStatuslineFile.write(weekly, to: fixture.location)
-        var lastAccepted = weekly
         for index in 1..<256 {
-            lastAccepted = try usage(id: "gemini-5h", fraction: Double(index) / 1000, reset: hourReset,
-                                     observedAt: now.addingTimeInterval(Double(index)))
-            try AntigravityStatuslineFile.write(lastAccepted, to: fixture.location)
+            let reading = try usage(id: "gemini-5h", fraction: Double(index) / 1000, reset: hourReset,
+                                    observedAt: now.addingTimeInterval(Double(index)))
+            try AntigravityStatuslineFile.write(reading, to: fixture.location)
         }
         #expect(AntigravityStatuslineFile.read(from: fixture.location)?.quotaHistoryExpiresAt == weekReset)
 
         let afterHour = try usage(id: "gemini-5h", fraction: 0.6, reset: hourReset.addingTimeInterval(3600),
                                   observedAt: hourReset.addingTimeInterval(1))
-        #expect(try AntigravityStatuslineFile.write(afterHour, to: fixture.location).usage == lastAccepted)
-        let weeklyRedraw = try usage(fraction: 0.5, reset: weekReset, observedAt: hourReset.addingTimeInterval(2))
-        let afterRedraw = try AntigravityStatuslineFile.write(weeklyRedraw, to: fixture.location)
-        #expect(afterRedraw.usage == lastAccepted)
-        #expect(afterRedraw.usage.remainingPercent(at: hourReset.addingTimeInterval(2)) == nil)
+        #expect(try AntigravityStatuslineFile.write(afterHour, to: fixture.location).usage == afterHour)
 
         let extendedReset = weekReset.addingTimeInterval(24 * 3600)
-        let rejected = try usage(fraction: 0.7, reset: extendedReset, observedAt: hourReset.addingTimeInterval(3))
-        let afterRejection = try AntigravityStatuslineFile.write(rejected, to: fixture.location)
-        #expect(afterRejection.usage == lastAccepted)
-        #expect(afterRejection.quotaHistoryExpiresAt == extendedReset)
-        let rejectedRedraw = try usage(fraction: 0.7, reset: extendedReset, observedAt: weekReset.addingTimeInterval(1))
-        let afterRejectedRedraw = try AntigravityStatuslineFile.write(rejectedRedraw, to: fixture.location)
-        #expect(afterRejectedRedraw.usage == lastAccepted)
-        #expect(afterRejectedRedraw.usage.remainingPercent(at: weekReset.addingTimeInterval(1)) == nil)
+        let extended = try usage(fraction: 0.7, reset: extendedReset, observedAt: hourReset.addingTimeInterval(3))
+        let afterExtension = try AntigravityStatuslineFile.write(extended, to: fixture.location)
+        #expect(afterExtension.usage == extended)
+        #expect(afterExtension.quotaHistoryExpiresAt == extendedReset)
+        let redraw = try usage(fraction: 0.7, reset: extendedReset, observedAt: weekReset.addingTimeInterval(1))
+        let afterRedraw = try AntigravityStatuslineFile.write(redraw, to: fixture.location)
+        #expect(afterRedraw.usage == extended)
+        #expect(afterRedraw.usage.remainingPercent(at: weekReset.addingTimeInterval(1)) == nil)
 
         let renewed = try usage(fraction: 0.9, reset: extendedReset.addingTimeInterval(7 * 24 * 3600),
                                 observedAt: extendedReset.addingTimeInterval(1))
         let afterReset = try AntigravityStatuslineFile.write(renewed, to: fixture.location)
         #expect(afterReset.usage == renewed)
-        #expect(afterReset.quotaMarkers.count == 1)
+        #expect(afterReset.quotaMarkers.count == 256)
     }
 
     private func usage(id: String = "gemini-weekly", fraction: Double, reset: Date,

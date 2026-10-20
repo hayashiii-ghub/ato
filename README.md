@@ -28,6 +28,8 @@ it running; **Quit ato?** stops future polling, and reopening resumes it.
 An in-flight request may finish. Widget updates follow macOS scheduling.
 Claude and Gemini receive usage through CLI activity, so polling alone does not
 produce a new reading. Gemini quota data that stays unchanged for 20 minutes also shows **—**.
+Antigravity provides no quota observation timestamp. ato? filters repeats of the
+current value and the latest 256 distinct readings; older replays may appear new.
 
 ## Accounts
 
