@@ -81,6 +81,29 @@ struct AntigravityHistoryCapacityTests {
         #expect(persisted.usage.remainingPercent(at: replayTime) == nil)
     }
 
+    @Test func anEvictedQuotaIsOutsideTheReplayGuarantee() throws {
+        let fixture = Fixture()
+        defer { fixture.remove() }
+        let weeklyReset = start.addingTimeInterval(7 * 24 * 3600)
+        let original = try usage(fraction: 0.9, reset: weeklyReset, observedAt: start)
+        let first = try AntigravityStatuslineFile.write(original, to: fixture.location)
+        let originalMarker = try #require(first.quotaMarkers.first)
+        for index in 1...256 {
+            let reading = try usage(fraction: 0.8 - Double(index) / 1000, reset: weeklyReset,
+                                    observedAt: start.addingTimeInterval(Double(index)))
+            try AntigravityStatuslineFile.write(reading, to: fixture.location)
+        }
+        let previous = try #require(AntigravityStatuslineFile.read(from: fixture.location))
+        #expect(!previous.quotaMarkers.contains(originalMarker))
+
+        // Without a source timestamp, an evicted quota cannot be distinguished from a new reading.
+        let receivedAt = start.addingTimeInterval(1600)
+        let replay = try usage(fraction: 0.9, reset: weeklyReset, observedAt: receivedAt)
+        let after = try AntigravityStatuslineFile.write(replay, to: fixture.location)
+        #expect(after.usage == replay)
+        #expect(after.quotaMarkers.count == 256)
+    }
+
     @Test func anExplicitAllowanceIncreaseIsAccepted() throws {
         let fixture = Fixture()
         defer { fixture.remove() }

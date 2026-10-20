@@ -18,6 +18,10 @@ ask before adding other documentation. Keep the app independent of cc:.
 - Unknown, failed, expired, or 20-minute-old usage is unavailable. Preserve actual
   observation times, including unchanged Gemini quota data; never infer a restored
   allowance. Keep README's security FAQ anchor.
+- Antigravity provides no quota observation timestamp or sequence. Filter the
+  current quota and latest 256 distinct fingerprints without stopping new input
+  at capacity. Older evicted replays may appear new; this is a known limit, not
+  a guarantee of server freshness.
 - `site/` owns the website's Bun/TypeScript source and static assets. Edit `src/`
   and `public/`, not generated `dist/`. Vercel builds `site/` and publishes `dist/`
   at `https://ato.shigoto.dev` from `main`; pull requests get previews. Retain the
