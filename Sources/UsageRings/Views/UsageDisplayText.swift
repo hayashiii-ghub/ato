@@ -9,7 +9,7 @@ enum UsageDisplayText {
         case .disabled: return "Enable AI usage to connect."
         case .setupRequired:
             return usage.service == .gemini
-                ? "Install or update Antigravity CLI (agy 1.1.11+), then refresh."
+                ? "Connect the Antigravity status-line helper, then use agy. See the README for setup."
                 : "Install or update the Codex CLI, then refresh."
         case .signInRequired:
             switch usage.service {
@@ -17,11 +17,11 @@ enum UsageDisplayText {
             case .cursor: return "Open Cursor and sign in, then refresh."
             case .claude: return "Use Claude Code, then refresh to receive usage."
             case .grokBot: return "Sign in to Cursor with your Grok account, then refresh."
-            case .gemini: return "Sign in to Antigravity CLI, then refresh."
+            case .gemini: return "Use Antigravity with the status-line helper to receive usage."
             }
         case .unavailable:
             return usage.service == .gemini
-                ? "Could not read Antigravity CLI usage. Check /usage in agy, then refresh."
+                ? "Could not read the Antigravity status-line cache. Use agy with the helper connected."
                 : "Could not update. Try refreshing in a moment."
         case .ready:
             if let period = usage.preferredPeriod, usage.headline == nil {
@@ -29,11 +29,17 @@ enum UsageDisplayText {
             }
             let windows = usage.preferredPeriod == nil ? usage.windows : [usage.headline].compactMap { $0 }
             if usage.hasFreshReading(at: date), windows.contains(where: { $0.resetsAt.map { $0 <= date } ?? false }) {
-                return usage.service == .claude
-                    ? "A usage window has reset. Use Claude Code, then refresh."
-                    : "A usage window has reset. Refresh to receive a new reading."
+                switch usage.service {
+                case .claude: return "A usage window has reset. Use Claude Code, then refresh."
+                case .gemini: return "A usage window has reset. Use Antigravity to receive a new quota reading."
+                default: return "A usage window has reset. Refresh to receive a new reading."
+                }
             }
-            return usage.service == .claude ? "Use Claude Code to update your usage." : "Waiting for a fresh reading."
+            switch usage.service {
+            case .claude: return "Use Claude Code to update your usage."
+            case .gemini: return "Waiting for a new quota reading from Antigravity. Refresh only rereads its cache."
+            default: return "Waiting for a fresh reading."
+            }
         }
     }
 
