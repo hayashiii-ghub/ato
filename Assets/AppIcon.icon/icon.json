@@ -1,0 +1,41 @@
+{
+  "fill" : {
+    "solid" : "extended-srgb:0,0,0,0"
+  },
+  "groups" : [
+    {
+      "blend-mode" : "normal",
+      "layers" : [
+        {
+          "glass" : false,
+          "hidden" : false,
+          "image-name-specializations" : [
+            {
+              "value" : "light.svg"
+            },
+            {
+              "appearance" : "dark",
+              "value" : "dark.svg"
+            }
+          ],
+          "name" : "ato",
+          "opacity" : 1
+        }
+      ],
+      "lighting" : "individual",
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0
+      },
+      "translucency" : {
+        "enabled" : false,
+        "value" : 0
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "squares" : [
+      "macOS"
+    ]
+  }
+}

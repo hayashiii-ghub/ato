@@ -71,6 +71,8 @@ def read_metadata(app):
         raise ValueError("Packaging requires CONFIGURATION=release.")
     if host["LSMinimumSystemVersion"] != "26.0":
         raise ValueError("Unexpected minimum macOS version.")
+    if host.get("CFBundleIconName") != "AppIcon" or host.get("CFBundleIconFile") not in ("AppIcon", "AppIcon.icns"):
+        raise ValueError("Missing appearance-aware app icon metadata.")
     sparkle = read_sparkle_configuration()
     if host.get("SUFeedURL") != sparkle["feed_url"] or host.get("SUPublicEDKey") != sparkle["public_ed_key"]:
         raise ValueError("Sparkle feed or public key is missing or differs from the build configuration.")
@@ -106,7 +108,7 @@ def inspect_bundle(app, mode):
     rpaths = run("/usr/bin/otool", "-l", str(app / "Contents/MacOS/UsageRings")).stdout
     if "@executable_path/../Frameworks" not in rpaths:
         raise ValueError("The host executable cannot locate embedded Sparkle.framework.")
-    for resource in ("LICENSE", "THIRD_PARTY_NOTICES.md", "AppIcon.icns", "Skills/usage-rings-budget/SKILL.md"):
+    for resource in ("LICENSE", "THIRD_PARTY_NOTICES.md", "AppIcon.icns", "Assets.car", "Skills/usage-rings-budget/SKILL.md"):
         if not (app / "Contents/Resources" / resource).is_file():
             raise ValueError(f"Missing bundled resource: {resource}")
     run("/usr/bin/codesign", "--verify", "--deep", "--strict", str(app))

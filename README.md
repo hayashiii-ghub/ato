@@ -87,6 +87,56 @@ app without refreshing or changing settings. For agent notices, read or copy the
 bundled [skill](Skills/usage-rings-budget/SKILL.md) from
 `Contents/Resources/Skills/usage-rings-budget`. Installation does not configure assistants.
 
+The skill alone checks at work boundaries; it cannot interrupt ongoing reasoning.
+The CLI is stateless, so manual use tracks noticed stages in the conversation.
+Fresh observations usually arrive every five minutes; unchanged data is not a new
+reading. Exit `1` means the snapshot is unavailable/invalid; exit `2` means invalid
+arguments. An unavailable reading does not automatically stop the agent's task.
+
+### Optional budget hooks (prototype)
+
+ato? 0.2.5+ bundles the prototype scripts with its skill; Python 3.9+ is required.
+The source is in `Skills/usage-rings-budget/scripts`. It supports local Codex, Claude Code,
+Cursor Agent, and Antigravity CLI sessions. It reads the same running-app snapshot and supplies
+account-allowance context at new below-20/10/5% stages. It neither interrupts a
+running model request nor starts a conversation. It does not launch the app,
+refresh providers, change sign-in, or stop work when usage is unknown.
+
+Preview a configuration fragment from the installed app. Choose `codex`, `claude`,
+`cursor`, or `antigravity`:
+
+```sh
+python3 "$HOME/Applications/Usage Rings.app/Contents/Resources/Skills/usage-rings-budget/scripts/hook_config.py" --client codex \
+  --cli "$HOME/Applications/Usage Rings.app/Contents/Helpers/usage-rings"
+```
+
+The preview changes no settings. Use a stable absolute script path; merge the
+fragment into existing hooks rather than replacing the configuration:
+
+| Client | Configuration | When context is supplied |
+| --- | --- | --- |
+| Codex | `.codex/hooks.json` in a trusted project, or `~/.codex/hooks.json`; approve the hook with `/hooks` | After tools, in the background; next safe model request |
+| Claude Code | `.claude/settings.local.json` or `~/.claude/settings.json` | After tools |
+| Cursor Agent | `.cursor/hooks.json` or `~/.cursor/hooks.json` | After tools |
+| Antigravity CLI | `.agents/hooks.json` or `~/.gemini/config/hooks.json` | Before each model invocation |
+
+Adjust both app paths for `/Applications` if needed. Keep unrelated hooks and status lines.
+Antigravity uses a named-hook map; do not
+wrap its generated fragment in another `hooks` object. Gemini CLI is unsupported.
+Cloud agents cannot read this Mac's snapshot. Synthetic integration tests cover
+the four output formats, and automatic reads have been verified in a new Codex CLI
+session. Register before starting a new session; reloading hooks in an already-open
+Desktop chat is unverified. Low-usage context delivery and the other AI clients
+still need live verification.
+
+Checks are limited to once per minute per client/conversation, with a two-second
+CLI deadline. Hashed conversation IDs and noticed stages are kept in an owner-only
+temporary directory (`ato-budget-hooks-<uid>`), with at most 128 conversations
+retained for seven days. No prompts, tool arguments, or full usage reports are
+saved. Each conversation retains eight windows and eight reset boundaries per
+window. The cache may be cleared or evicted, after which a stage can be noticed again.
+Only new observations and reset boundaries affect notices; stale/unknown data is quiet.
+
 ## Security and data FAQ
 
 **Reads:** Codex uses its CLI, which manages authentication/cache.
@@ -120,11 +170,16 @@ and opens the app. Custom Claude/Antigravity status lines are preserved. Develop
 release instructions: [AGENTS.md](AGENTS.md). Licenses: [LICENSE](LICENSE) and
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
+`Assets/AppIcon.svg` owns the icon shape. After editing it, run
+`swift run IconAssets` to regenerate the native light/dark icon layers and web
+icons using the widget's SwiftUI colors. Builds compile `Assets/AppIcon.icon`
+with Xcode's asset compiler; macOS chooses its appearance using the system icon style.
+
 ## Website
 
 The [public website](https://ato.shigoto.dev) is hosted on Vercel.
 Its source lives in [`site/`](site), using Bun and TypeScript with static HTML/CSS.
-Python is used only by the app's setup, packaging, and tests.
+Python is used by the app's setup, packaging, optional hooks, and tests.
 
 ```sh
 cd site

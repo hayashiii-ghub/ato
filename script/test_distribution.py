@@ -58,6 +58,7 @@ class PackageTests(unittest.TestCase):
         self.widget = self.app / "Contents/PlugIns/UsageRingsWidget.appex"
         self.host = {
             "CFBundleIdentifier": "work.hayashigoto.UsageRings",
+            "CFBundleIconFile": "AppIcon", "CFBundleIconName": "AppIcon",
             "CFBundleShortVersionString": "0.1.1", "CFBundleVersion": "2",
             "LSMinimumSystemVersion": "26.0", "UsageRingsSourceRevision": "a" * 40,
             "UsageRingsSourceDirty": False, "UsageRingsBuildConfiguration": "release",
@@ -75,7 +76,7 @@ class PackageTests(unittest.TestCase):
                      version / "XPCServices/Installer.xpc/Contents/MacOS/Installer"):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(b"fixture")
-        for resource in ("LICENSE", "THIRD_PARTY_NOTICES.md", "AppIcon.icns", "Skills/usage-rings-budget/SKILL.md"):
+        for resource in ("LICENSE", "THIRD_PARTY_NOTICES.md", "AppIcon.icns", "Assets.car", "Skills/usage-rings-budget/SKILL.md"):
             path = self.app / "Contents/Resources" / resource
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(b"fixture")
@@ -206,6 +207,17 @@ class PackageTests(unittest.TestCase):
     def test_requires_budget_skill(self):
         (self.app / "Contents/Resources/Skills/usage-rings-budget/SKILL.md").unlink()
         with self.assertRaisesRegex(ValueError, "Missing bundled resource: Skills/usage-rings-budget/SKILL.md"):
+            distribution.inspect_bundle(self.app, "unnotarized")
+
+    def test_requires_appearance_aware_icon_resources_and_metadata(self):
+        self.host.pop("CFBundleIconName")
+        self.write_metadata()
+        with self.assertRaisesRegex(ValueError, "appearance-aware app icon"):
+            distribution.inspect_bundle(self.app, "unnotarized")
+        self.host["CFBundleIconName"] = "AppIcon"
+        self.write_metadata()
+        (self.app / "Contents/Resources/Assets.car").unlink()
+        with self.assertRaisesRegex(ValueError, "Missing bundled resource: Assets.car"):
             distribution.inspect_bundle(self.app, "unnotarized")
 
     def test_cli_architecture_must_match_the_app(self):
