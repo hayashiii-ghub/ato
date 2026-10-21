@@ -22,6 +22,7 @@ let package = Package(
         .executableTarget(name: "UsageRingsStatusline", dependencies: ["UsageCore"]),
         .executableTarget(name: "UsageRingsCLI", dependencies: ["UsageCore"]),
         .executableTarget(name: "WidgetPreview", dependencies: ["UsageCore"], path: "Tools/WidgetPreview"),
+        .executableTarget(name: "IconAssets", path: "Tools/IconAssets"),
         .executableTarget(
             name: "UsageRingsWidget", dependencies: ["UsageCore"],
             swiftSettings: [.unsafeFlags(["-application-extension"])],
