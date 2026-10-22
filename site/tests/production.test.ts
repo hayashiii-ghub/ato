@@ -22,7 +22,7 @@ test("ships every local HTML asset in the static output", async () => {
   }
 });
 
-test("publishes adaptive favicons with PNG and ICO fallbacks", async () => {
+test("declares one fixed favicon and keeps matching legacy paths", async () => {
   const html = await Bun.file(resolve(output, "index.html")).text();
   const icons = [...html.matchAll(/<link\b[^>]*rel="icon"[^>]*>/g)].map(([link]) => ({
     href: link.match(/href="([^"]+)"/)?.[1],
@@ -31,21 +31,36 @@ test("publishes adaptive favicons with PNG and ICO fallbacks", async () => {
     media: link.match(/media="([^"]+)"/)?.[1]
   }));
   expect(icons).toEqual([
-    expect.objectContaining({ href: expect.stringMatching(/\/favicon-[a-z0-9]+\.ico$/i), sizes: "16x16 32x32 48x48" }),
-    expect.objectContaining({ href: expect.stringMatching(/\/favicon-32-[a-z0-9]+\.png$/i), type: "image/png", media: "(prefers-color-scheme: light)" }),
-    expect.objectContaining({ href: expect.stringMatching(/\/favicon-32-dark-[a-z0-9]+\.png$/i), type: "image/png", media: "(prefers-color-scheme: dark)" }),
-    expect.objectContaining({ href: expect.stringMatching(/\/favicon-[a-z0-9]+\.svg$/i), type: "image/svg+xml", sizes: "any" })
+    { href: expect.stringMatching(/\/favicon-32-[a-z0-9]+\.png$/i), type: "image/png", sizes: "32x32", media: undefined }
   ]);
   for (const asset of ["favicon.ico", "assets/favicon.svg", "assets/favicon-32.png", "assets/favicon-32-dark.png", "assets/AppIcon.png", "assets/AppIcon-dark.png", "assets/apple-touch-icon.png"]) {
     expect(await Bun.file(resolve(output, asset)).exists(), asset).toBe(true);
   }
+  expect(await Bun.file(resolve(output, "assets/favicon-32-dark.png")).bytes())
+    .toEqual(await Bun.file(resolve(output, "assets/favicon-32.png")).bytes());
+  const ico = await Bun.file(resolve(output, "favicon.ico")).bytes();
+  const directory = new DataView(ico.buffer, ico.byteOffset, ico.byteLength);
+  expect(directory.getUint16(0, true)).toBe(0);
+  expect(directory.getUint16(2, true)).toBe(1);
+  expect(directory.getUint16(4, true)).toBe(3);
+  for (const [index, size] of [16, 32, 48].entries()) {
+    const entry = 6 + index * 16;
+    expect([ico[entry], ico[entry + 1]]).toEqual([size, size]);
+    const length = directory.getUint32(entry + 8, true);
+    const offset = directory.getUint32(entry + 12, true);
+    expect(offset + length).toBeLessThanOrEqual(ico.length);
+    if (size === 32) expect(ico.slice(offset, offset + length))
+      .toEqual(await Bun.file(resolve(output, "assets/favicon-32.png")).bytes());
+  }
 });
 
-test("keeps the adaptive favicon aligned with the native icon geometry", async () => {
+test("keeps native geometry with a fixed dark favicon background", async () => {
   const native = await Bun.file(resolve(import.meta.dir, "../../Assets/AppIcon.svg")).text();
   const favicon = await Bun.file(resolve(output, "assets/favicon.svg")).text();
   const geometry = (svg: string) => svg.match(/\b(?:viewBox|cx|cy|r|d|stroke-width|stroke-linecap|stroke-dasharray|transform)="[^"]*"/g);
   expect(geometry(native)).not.toBeNull();
   expect(geometry(favicon)).toEqual(geometry(native));
-  expect(favicon).toMatch(/@media\s*\(prefers-color-scheme:\s*dark\)/);
+  expect(favicon).not.toContain("@media");
+  expect(favicon).toMatch(/<rect\b[^>]*id="background"[^>]*fill="#000"/);
+  expect(favicon).toMatch(/<path\b[^>]*id="question"[^>]*fill="rgb\(255\.0+,255\.0+,255\.0+\)"/);
 });

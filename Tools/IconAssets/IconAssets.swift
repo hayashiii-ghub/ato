@@ -27,6 +27,8 @@ struct IconAssets {
         let ids = ["track", "ring", "question", "dot"]
         let lightSVG = try svgData(svg, shapes: shapes, ids: ids, palette: light)
         let darkSVG = try svgData(svg, shapes: shapes, ids: ids, palette: dark)
+        let faviconSVG = try faviconData(darkSVG)
+        let faviconPNG = try png(faviconSVG, size: 32)
         var outputs: [(String, Data)] = [
             ("Assets/AppIcon.icon/Assets/light.svg", try svgData(svg, shapes: shapes, ids: ids, palette: light,
                                                               scale: macArtworkScale)),
@@ -59,10 +61,10 @@ struct IconAssets {
             ("site/public/assets/AppIcon.png", lightPNG),
             ("site/public/assets/AppIcon-dark.png", try png(darkSVG, size: 1024)),
             ("site/public/assets/apple-touch-icon.png", try png(lightSVG, size: 180)),
-            ("site/public/assets/favicon-32.png", try png(lightSVG, size: 32)),
-            ("site/public/assets/favicon-32-dark.png", try png(darkSVG, size: 32)),
-            ("site/public/assets/favicon.svg", source),
-            ("site/public/favicon.ico", try ico(lightSVG))
+            ("site/public/assets/favicon-32.png", faviconPNG),
+            ("site/public/assets/favicon-32-dark.png", faviconPNG),
+            ("site/public/assets/favicon.svg", faviconSVG),
+            ("site/public/favicon.ico", try ico(faviconSVG))
         ]
         for (path, data) in outputs {
             let destination = root.appendingPathComponent(path)
@@ -154,6 +156,25 @@ struct IconAssets {
     private static func set(_ name: String, _ value: String, on element: XMLElement) {
         element.removeAttribute(forName: name)
         element.addAttribute(XMLNode.attribute(withName: name, stringValue: value) as! XMLNode)
+    }
+
+    private static func faviconData(_ darkSVG: Data) throws -> Data {
+        let document = try XMLDocument(data: darkSVG)
+        guard let svg = document.rootElement() else { throw AssetError.invalidSVG }
+        let box = (svg.attribute(forName: "viewBox")?.stringValue ?? "")
+            .split { $0.isWhitespace || $0 == "," }.compactMap { Double($0) }
+        guard box.count == 4, box.allSatisfy(\.isFinite), box[2] > 0, box[3] > 0 else {
+            throw AssetError.invalidSVG
+        }
+        // A tab's background can differ from its preferred color scheme; keep the white mark on black.
+        let background = XMLElement(name: "rect")
+        for (name, value) in [("id", "background"), ("x", String(box[0])), ("y", String(box[1])),
+                              ("width", String(box[2])), ("height", String(box[3])),
+                              ("rx", String(min(box[2], box[3]) * 0.2)), ("fill", "#000")] {
+            set(name, value, on: background)
+        }
+        svg.insertChild(background, at: 0)
+        return document.xmlData(options: [.nodePrettyPrint])
     }
 
     private static func png(_ svg: Data, size: Int) throws -> Data {
