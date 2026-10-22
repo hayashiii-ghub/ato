@@ -83,9 +83,23 @@ To disconnect, remove only this invocation; remove source-installer setup with
 ```
 
 Adjust the app path as needed; use `--help` for options. The CLI reads the running
-app without refreshing or changing settings. For agent notices, read or copy the
-bundled [skill](Skills/usage-rings-budget/SKILL.md) from
-`Contents/Resources/Skills/usage-rings-budget`. Installation does not configure assistants.
+app without refreshing or changing settings.
+
+Open **AI Tools** in ato? and choose **Set Up** for Codex, Claude Code, Cursor,
+or Antigravity. This links `~/.local/bin/usage-rings`, copies the bundled
+[skill](Skills/usage-rings-budget/SKILL.md), and merges that assistant's budget hook.
+Antigravity receives skills for both its CLI and App/IDE. Setup uses the native
+`Contents/Helpers/UsageRingsBudgetHook`; no Python installation is needed.
+In Codex CLI, use `/hooks` to review and trust the new hook if needed. Start a new assistant session
+after setup. Configuration alone does not prove the hook is approved or running.
+
+The same screen checks setup, updates managed tools after app updates, and
+disconnects them. Existing settings and status lines are preserved; edited skills,
+unrelated links, and unrecognized ato? hooks need review before changes. Settings
+are backed up beside their original files; failed setup restores earlier files. The shared CLI is
+kept while another configured assistant uses it. Ownership records are stored
+under `~/Library/Application Support/Usage Rings/`. Setup does not enable monitoring,
+connect status-line helpers, sign in, or launch an assistant.
 
 The skill alone checks at work boundaries; it cannot interrupt ongoing reasoning.
 The CLI is stateless, so manual use tracks noticed stages in the conversation.
@@ -93,15 +107,15 @@ Fresh observations usually arrive every five minutes; unchanged data is not a ne
 reading. Exit `1` means the snapshot is unavailable/invalid; exit `2` means invalid
 arguments. An unavailable reading does not automatically stop the agent's task.
 
-### Optional budget hooks (prototype)
+### Budget hooks
 
-ato? 0.2.5+ bundles the prototype scripts with its skill; Python 3.9+ is required.
-The source is in `Skills/usage-rings-budget/scripts`. It supports local Codex, Claude Code,
+The native helper supports local Codex, Claude Code,
 Cursor Agent, and Antigravity CLI sessions. It reads the same running-app snapshot and supplies
 account-allowance context at new below-20/10/5% stages. It neither interrupts a
 running model request nor starts a conversation. It does not launch the app,
 refresh providers, change sign-in, or stop work when usage is unknown.
 
+The Python prototype from 0.2.5 remains available for manual setup (Python 3.9+).
 Preview a configuration fragment from the installed app. Choose `codex`, `claude`,
 `cursor`, or `antigravity`:
 
@@ -123,19 +137,21 @@ fragment into existing hooks rather than replacing the configuration:
 Adjust both app paths for `/Applications` if needed. Keep unrelated hooks and status lines.
 Antigravity uses a named-hook map; do not
 wrap its generated fragment in another `hooks` object. Gemini CLI is unsupported.
-Cloud agents cannot read this Mac's snapshot. Synthetic integration tests cover
-the four output formats, and automatic reads have been verified in a new Codex CLI
-session. Register before starting a new session; reloading hooks in an already-open
-Desktop chat is unverified. Low-usage context delivery and the other AI clients
-still need live verification.
+Cloud agents cannot read this Mac's snapshot. Synthetic tests cover the output
+formats. Automatic reads with both the Python prototype and native helper were verified in new Codex CLI
+sessions, with the native hook approved through `/hooks`. Live low-usage delivery and
+native execution inside Claude Code, Cursor Agent, and Antigravity still need verification.
+Reloading an already-open Desktop chat is unverified.
 
 Checks are limited to once per minute per client/conversation, with a two-second
 CLI deadline. Hashed conversation IDs and noticed stages are kept in an owner-only
-temporary directory (`ato-budget-hooks-<uid>`), with at most 128 conversations
+temporary directory (`ato-budget-native-hooks-<uid>` for the native helper,
+`ato-budget-hooks-<uid>` for Python), with at most 128 conversations
 retained for seven days. No prompts, tool arguments, or full usage reports are
 saved. Each conversation retains eight windows and eight reset boundaries per
 window. The cache may be cleared or evicted, after which a stage can be noticed again.
 Only new observations and reset boundaries affect notices; stale/unknown data is quiet.
+The two helpers use separate caches, so switching helpers can repeat an earlier notice.
 
 ## Security and data FAQ
 
@@ -179,7 +195,7 @@ with Xcode's asset compiler; macOS chooses its appearance using the system icon 
 
 The [public website](https://ato.shigoto.dev) is hosted on Vercel.
 Its source lives in [`site/`](site), using Bun and TypeScript with static HTML/CSS.
-Python is used by the app's setup, packaging, optional hooks, and tests.
+Python is used by source installation, packaging, manual hook scripts, and tests.
 
 ```sh
 cd site

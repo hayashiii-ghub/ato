@@ -9,6 +9,9 @@ ask before adding other documentation. Keep the app independent of cc:.
 - `Sources/UsageRings`: host, providers, views, stores. `UsageCore`: shared models,
   parsing, sanitized persistence, rings/resources. `UsageRingsWidget`: sandboxed
   widget. `UsageRingsCLI` and `Skills/usage-rings-budget`: read-only agent interface.
+- AI Tools setup belongs to the host app, not the CLI. Merge only owned budget
+  hooks; preserve edited skills, unrelated settings, status lines, and client trust.
+  Bundle/sign the native `UsageRingsBudgetHook`; setup must not enable monitoring.
 - Preserve explicit consent, selected-provider polling, and display preferences.
   The CLI must not launch/enable the app, refresh providers, read credentials, or change settings.
 - Provider CLIs own sign-in. Do not add shell execution, login flows, or credential

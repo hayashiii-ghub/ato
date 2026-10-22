@@ -7,6 +7,7 @@ let package = Package(
     products: [
         .executable(name: "UsageRings", targets: ["UsageRings"]),
         .executable(name: "UsageRingsStatusline", targets: ["UsageRingsStatusline"]),
+        .executable(name: "UsageRingsBudgetHook", targets: ["UsageRingsBudgetHook"]),
         .executable(name: "usage-rings", targets: ["UsageRingsCLI"]),
         .executable(name: "UsageRingsWidget", targets: ["UsageRingsWidget"])
     ],
@@ -20,6 +21,7 @@ let package = Package(
             .product(name: "Sparkle", package: "Sparkle")
         ]),
         .executableTarget(name: "UsageRingsStatusline", dependencies: ["UsageCore"]),
+        .executableTarget(name: "UsageRingsBudgetHook", dependencies: ["UsageCore"]),
         .executableTarget(name: "UsageRingsCLI", dependencies: ["UsageCore"]),
         .executableTarget(name: "WidgetPreview", dependencies: ["UsageCore"], path: "Tools/WidgetPreview"),
         .executableTarget(name: "IconAssets", path: "Tools/IconAssets"),

@@ -6,6 +6,7 @@ struct UsageDetailsView: View {
     @ObservedObject var store: UsageStore
     @ObservedObject var updateController: AppUpdateController
     @State private var showingHelp = false
+    @State private var showingAgentTools = false
     @State private var selectedService: UsageService?
 
     private var currentService: UsageService? {
@@ -14,6 +15,31 @@ struct UsageDetailsView: View {
     }
 
     var body: some View {
+        ZStack(alignment: .topLeading) {
+            // Keep the usage page mounted so Back preserves its scroll position.
+            ScrollView {
+                usageContent
+                    .padding(24)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .opacity(showingAgentTools ? 0 : 1)
+            .allowsHitTesting(!showingAgentTools)
+            .disabled(showingAgentTools)
+            .accessibilityHidden(showingAgentTools)
+
+            if showingAgentTools {
+                AgentToolsView(onBack: { showingAgentTools = false })
+            }
+        }
+        .font(.body)
+        .controlSize(.regular)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .onAppear {
+            if selectedService == nil { selectedService = store.ringOrder.first }
+        }
+    }
+
+    private var usageContent: some View {
         VStack(alignment: .leading, spacing: 20) {
             HStack {
                 Text("ato?").font(.title2.weight(.semibold))
@@ -67,9 +93,7 @@ struct UsageDetailsView: View {
                 Button {
                     showingHelp = true
                 } label: {
-                    Label("Help", systemImage: "questionmark.circle")
-                        .padding(.vertical, 4)
-                        .contentShape(Rectangle())
+                    footerLabel("Help", systemImage: "questionmark.circle")
                 }
                 .buttonStyle(.plain)
                 .popover(isPresented: $showingHelp, arrowEdge: .bottom) {
@@ -85,6 +109,13 @@ struct UsageDetailsView: View {
                     .padding(20)
                     .frame(width: 380)
                 }
+                Button {
+                    showingHelp = false
+                    showingAgentTools = true
+                } label: {
+                    footerLabel("AI Tools", systemImage: "slider.horizontal.3")
+                }
+                .buttonStyle(.plain)
                 Spacer()
                 Button("Quit ato?") {
                     NSApp.terminate(nil)
@@ -97,13 +128,18 @@ struct UsageDetailsView: View {
                     .foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
             }
         }
-        .font(.body)
-        .controlSize(.regular)
-        .padding(24)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .onAppear {
-            if selectedService == nil { selectedService = store.ringOrder.first }
+    }
+
+    private func footerLabel(_ title: String, systemImage: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: systemImage)
+                .font(.system(size: 12, weight: .medium))
+                .frame(width: 14, height: 14)
+                .accessibilityHidden(true)
+            Text(title)
         }
+        .padding(.vertical, 4)
+        .contentShape(Rectangle())
     }
 
     private var usageInstructions: some View {

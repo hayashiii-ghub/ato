@@ -91,6 +91,7 @@ def inspect_bundle(app, mode):
         "widget": (widget, widget / "Contents/MacOS/UsageRingsWidget"),
         "statusline": (app / "Contents/Helpers/UsageRingsStatusline",) * 2,
         "cli": (app / "Contents/Helpers/usage-rings",) * 2,
+        "budget-hook": (app / "Contents/Helpers/UsageRingsBudgetHook",) * 2,
     }
     framework = app / "Contents/Frameworks/Sparkle.framework"
     version = framework / "Versions/Current"
