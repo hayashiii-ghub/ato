@@ -138,9 +138,10 @@ Adjust both app paths for `/Applications` if needed. Keep unrelated hooks and st
 Antigravity uses a named-hook map; do not
 wrap its generated fragment in another `hooks` object. Gemini CLI is unsupported.
 Cloud agents cannot read this Mac's snapshot. Synthetic tests cover the output
-formats. The Python prototype's automatic reads were verified in a new Codex CLI
-session; live low-usage delivery and the native helper's execution inside each
-assistant still need verification. Reloading an already-open Desktop chat is unverified.
+formats. Automatic reads with both the Python prototype and native helper were verified in new Codex CLI
+sessions, with the native hook approved through `/hooks`. Live low-usage delivery and
+native execution inside Claude Code, Cursor Agent, and Antigravity still need verification.
+Reloading an already-open Desktop chat is unverified.
 
 Checks are limited to once per minute per client/conversation, with a two-second
 CLI deadline. Hashed conversation IDs and noticed stages are kept in an owner-only
