@@ -18,10 +18,13 @@ final class UsageWindowController {
                                   styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
             window.title = "ato?"
             window.isReleasedWhenClosed = false
-            window.contentView = NSHostingView(rootView: ScrollView {
+            let content = NSHostingView(rootView:
                 UsageDetailsView(store: store, updateController: updateController)
-                    .frame(maxWidth: .infinity, alignment: .topLeading)
-            })
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            )
+            // This window owns its size; changing pages must not resize it to their ideal heights.
+            content.sizingOptions = []
+            window.contentView = content
             window.center()
             self.window = window
         }

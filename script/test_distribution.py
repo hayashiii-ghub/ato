@@ -70,6 +70,7 @@ class PackageTests(unittest.TestCase):
         version = framework / "Versions/Current"
         for path in (self.app / "Contents/MacOS/UsageRings", self.widget / "Contents/MacOS/UsageRingsWidget",
                      self.app / "Contents/Helpers/UsageRingsStatusline", self.app / "Contents/Helpers/usage-rings",
+                     self.app / "Contents/Helpers/UsageRingsBudgetHook",
                      framework / "Sparkle",
                      version / "Autoupdate", version / "Updater.app/Contents/MacOS/Updater",
                      version / "XPCServices/Downloader.xpc/Contents/MacOS/Downloader",
@@ -137,6 +138,7 @@ class PackageTests(unittest.TestCase):
         self.assertEqual(manifest["architectures"], ["arm64"])
         self.assertTrue(all(item["type"] == "ad-hoc" for item in manifest["signatures"].values()))
         self.assertIn("cli", manifest["signatures"])
+        self.assertIn("budget-hook", manifest["signatures"])
         self.assertFalse(any("stapler" in call.args or "--assess" in call.args for call in self.mock.call_args_list))
 
     def test_explicit_unnotarized_mode_preserves_integrity_checks(self):
@@ -189,7 +191,7 @@ class PackageTests(unittest.TestCase):
 
     def test_notarized_packaging_rejects_a_mixed_team_or_unsigned_nested_component(self):
         self.developer_id()
-        for name in ("UsageRingsStatusline", "usage-rings"):
+        for name in ("UsageRingsStatusline", "usage-rings", "UsageRingsBudgetHook"):
             helper = str(self.app / "Contents/Helpers" / name)
             self.details_overrides[helper] = "Signature=adhoc\n"
             with self.subTest(helper=name, signature="ad-hoc"), self.assertRaisesRegex(ValueError, "Developer ID"):
@@ -202,6 +204,16 @@ class PackageTests(unittest.TestCase):
     def test_requires_bundled_cli(self):
         (self.app / "Contents/Helpers/usage-rings").unlink()
         with self.assertRaisesRegex(ValueError, "Missing executable: cli"):
+            distribution.inspect_bundle(self.app, "unnotarized")
+
+    def test_requires_signed_native_budget_hook(self):
+        helper = self.app / "Contents/Helpers/UsageRingsBudgetHook"
+        self.failed_signature = str(helper)
+        with self.assertRaisesRegex(ValueError, "signature check failed"):
+            distribution.inspect_bundle(self.app, "unnotarized")
+        self.failed_signature = None
+        helper.unlink()
+        with self.assertRaisesRegex(ValueError, "Missing executable: budget-hook"):
             distribution.inspect_bundle(self.app, "unnotarized")
 
     def test_requires_budget_skill(self):
