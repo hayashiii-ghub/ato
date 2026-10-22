@@ -161,16 +161,20 @@ struct IconAssets {
     private static func faviconData(_ darkSVG: Data) throws -> Data {
         let document = try XMLDocument(data: darkSVG)
         guard let svg = document.rootElement() else { throw AssetError.invalidSVG }
-        let box = (svg.attribute(forName: "viewBox")?.stringValue ?? "")
-            .split { $0.isWhitespace || $0 == "," }.compactMap { Double($0) }
-        guard box.count == 4, box.allSatisfy(\.isFinite), box[2] > 0, box[3] > 0 else {
+        guard let track = (svg.children ?? []).compactMap({ $0 as? XMLElement })
+            .first(where: { $0.attribute(forName: "id")?.stringValue == "track" }),
+              let x = track.attribute(forName: "cx")?.stringValue,
+              let y = track.attribute(forName: "cy")?.stringValue,
+              let cx = Double(x), let cy = Double(y),
+              let radius = Double(track.attribute(forName: "r")?.stringValue ?? ""),
+              let stroke = Double(track.attribute(forName: "stroke-width")?.stringValue ?? ""),
+              [cx, cy, radius, stroke].allSatisfy(\.isFinite), radius > 0, stroke > 0 else {
             throw AssetError.invalidSVG
         }
         // A tab's background can differ from its preferred color scheme; keep the white mark on black.
-        let background = XMLElement(name: "rect")
-        for (name, value) in [("id", "background"), ("x", String(box[0])), ("y", String(box[1])),
-                              ("width", String(box[2])), ("height", String(box[3])),
-                              ("rx", String(min(box[2], box[3]) * 0.2)), ("fill", "#000")] {
+        let background = XMLElement(name: "circle")
+        for (name, value) in [("id", "background"), ("cx", x), ("cy", y),
+                              ("r", String(radius + stroke / 2)), ("fill", "#000")] {
             set(name, value, on: background)
         }
         svg.insertChild(background, at: 0)

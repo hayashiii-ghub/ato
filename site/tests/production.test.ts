@@ -54,13 +54,21 @@ test("declares one fixed favicon and keeps matching legacy paths", async () => {
   }
 });
 
-test("keeps native geometry with a fixed dark favicon background", async () => {
+test("keeps native geometry inside a circular dark favicon background", async () => {
   const native = await Bun.file(resolve(import.meta.dir, "../../Assets/AppIcon.svg")).text();
   const favicon = await Bun.file(resolve(output, "assets/favicon.svg")).text();
   const geometry = (svg: string) => svg.match(/\b(?:viewBox|cx|cy|r|d|stroke-width|stroke-linecap|stroke-dasharray|transform)="[^"]*"/g);
+  const background = favicon.match(/<circle\b[^>]*id="background"[^>]*>/)?.[0] ?? "";
+  const track = native.match(/<circle\b[^>]*id="track"[^>]*>/)?.[0] ?? "";
+  const attribute = (shape: string, name: string) => Number(shape.match(new RegExp(`\\b${name}="([^"]+)"`))?.[1]);
+  const artwork = favicon.replace(/<circle\b[^>]*id="background"[^>]*(?:\/>|>\s*<\/circle>)/, "");
   expect(geometry(native)).not.toBeNull();
-  expect(geometry(favicon)).toEqual(geometry(native));
+  expect(geometry(artwork)).toEqual(geometry(native));
   expect(favicon).not.toContain("@media");
-  expect(favicon).toMatch(/<rect\b[^>]*id="background"[^>]*fill="#000"/);
+  expect(favicon).not.toContain("<rect");
+  expect(background).toContain('fill="#000"');
+  expect(attribute(background, "cx")).toBe(attribute(track, "cx"));
+  expect(attribute(background, "cy")).toBe(attribute(track, "cy"));
+  expect(attribute(background, "r")).toBe(attribute(track, "r") + attribute(track, "stroke-width") / 2);
   expect(favicon).toMatch(/<path\b[^>]*id="question"[^>]*fill="rgb\(255\.0+,255\.0+,255\.0+\)"/);
 });

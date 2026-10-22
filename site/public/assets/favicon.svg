@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="114 96 1024 1024" fill="none" width="1024" height="1024">
-    <rect id="background" x="114.0" y="96.0" width="1024.0" height="1024.0" rx="204.8" fill="#000"></rect>
+    <circle id="background" cx="626" cy="608" r="490.0" fill="#000"></circle>
     <circle id="track" cx="626" cy="608" r="443.5" stroke-width="93" stroke="rgb(255.000000000,255.000000000,255.000000000)" stroke-opacity="0.110117644"></circle>
     <circle id="ring" cx="626" cy="608" r="443.5" stroke-width="93" stroke-linecap="round" stroke-dasharray="2293.366 493.227" transform="rotate(-91.5 626 608)" stroke="rgb(48.000000939,209.000002742,87.999994755)" stroke-opacity="1.000000000"></circle>
     <path id="question" d="M469 511C451 511 443 501 443 484C443 400 513 328 627 328C738 328 813 385 813 483C813 565 768 601 711 633C678 654 660 671 660 698V705C660 720 650 729 633 729H584C567 729 558 718 558 701V684C558 622 592 591 650 558C692 533 710 515 710 486C710 450 677 426 628 426C581 426 550 451 545 487C543 503 534 511 516 511H469Z" fill="rgb(255.000000000,255.000000000,255.000000000)" fill-opacity="0.847058833"></path>
