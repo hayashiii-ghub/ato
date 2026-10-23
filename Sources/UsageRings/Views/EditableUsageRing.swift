@@ -6,46 +6,101 @@ struct EditableUsageRing: View {
     let service: UsageService
     let index: Int
     let date: Date
-    let size: CGFloat
-    let isSelected: Bool
-    let onSelect: () -> Void
+    @Binding var isExpanded: Bool
     private static let dragPrefix = "usage-rings:"
 
     private var usage: ServiceUsage { store.snapshot.usage(for: service) }
-    private var displayedWindowTitle: String { usage.preferredPeriod?.title ?? usage.headline?.title ?? "—" }
-    private var accessibilityValue: String {
-        let remaining: String
-        if let percent = usage.remainingPercent(at: date) {
-            remaining = "\(Int(percent.rounded())) percent remaining"
-        } else {
-            remaining = "Usage unavailable"
+    private var periodOptions: [UsagePeriod] {
+        switch service {
+        case .claude, .gemini: return UsagePeriod.allCases
+        case .codex:
+            return UsagePeriod.allCases.filter { period in
+                usage.windows.contains { usage.period(for: $0) == period } || usage.preferredPeriod == period
+            }
+        case .cursor, .grokBot: return []
         }
-        return "\(remaining), \(displayedWindowTitle)"
     }
 
     var body: some View {
-        Button(action: onSelect) {
-            UsageRingView(usage: usage, date: date, size: size)
-                .contentShape(Rectangle())
+        let remainingPercent = usage.remainingPercent(at: date).map { Int($0.rounded()) }
+
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 10) {
+                UsageRingView(usage: usage, date: date, size: 32, compact: true)
+                    .help("Drag to reorder")
+                    .draggable(Self.dragPrefix + service.rawValue) {
+                        UsageRingView(usage: usage, date: date, size: 32, compact: true)
+                    }
+                    .contextMenu {
+                        Button("Move up") { store.moveRing(from: index, to: index - 1) }
+                            .disabled(index == 0)
+                        Button("Move down") { store.moveRing(from: index, to: index + 1) }
+                            .disabled(index == store.ringOrder.count - 1)
+                    }
+                Picker("Service for ring \(index + 1)", selection: Binding(
+                    get: { service },
+                    set: { store.selectRing($0, at: index) }
+                )) {
+                    ForEach(UsageService.allCases) { candidate in
+                        Text(candidate.name).tag(candidate)
+                    }
+                }
+                .pickerStyle(.menu)
+                .buttonSizing(.flexible)
+                .controlSize(.large)
+                .labelsHidden()
+                .frame(width: 110, height: 28)
+                Spacer(minLength: 4)
+                periodPicker
+                Text(remainingPercent.map { "\($0)%" } ?? "—")
+                    .font(.system(size: 13, weight: .semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(remainingPercent == nil ? .secondary : .primary)
+                    .frame(width: 42, alignment: .trailing)
+                    .accessibilityLabel("Remaining")
+                    .accessibilityValue(remainingPercent.map { "\($0) percent" } ?? "Unavailable")
+                Button {
+                    isExpanded.toggle()
+                } label: {
+                    SettingsIcon(name: isExpanded ? "chevron.up" : "chevron.down", isDisclosure: true)
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel("Usage and reset times for \(service.name)")
+                .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
+            }
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+            .dropDestination(for: String.self) { items, _ in return acceptDrop(items) }
+            if isExpanded {
+                UsageServiceDetails(store: store, service: service, date: date)
+                    .padding(.leading, 42)
+                    .padding(.bottom, 12)
+            }
         }
-        .buttonStyle(.plain)
-        .focusEffectDisabled()
-        .background {
-            RoundedRectangle(cornerRadius: 16)
-                .fill(.primary.opacity(isSelected ? 0.04 : 0))
-                .padding(-6)
-                .allowsHitTesting(false)
-        }
-        .help("View \(service.name) usage and options. Drag to reorder.")
-        .accessibilityLabel("\(service.name), ring \(index + 1)")
-        .accessibilityValue(accessibilityValue)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
-        .accessibilityHint("Show usage details below. Drag to reorder.")
-        .draggable(Self.dragPrefix + service.rawValue) {
-            UsageRingView(usage: usage, date: date, size: size)
-        }
-        .dropDestination(for: String.self) { items, _ in
-            return acceptDrop(items)
+    }
+
+    @ViewBuilder
+    private var periodPicker: some View {
+        if !periodOptions.isEmpty {
+            Picker("Period for \(service.name)", selection: Binding<UsagePeriod?>(
+                get: { store.preferredPeriods[service] },
+                set: { store.setPreferredPeriod($0, for: service) }
+            )) {
+                Text("Auto").tag(Optional<UsagePeriod>.none)
+                ForEach(periodOptions) { period in
+                    Text(period.title).tag(Optional(period))
+                }
+            }
+            .pickerStyle(.menu)
+            .buttonSizing(.flexible)
+            .controlSize(.large)
+            .labelsHidden()
+            .frame(width: 82, height: 28)
+        } else {
+            Text(usage.headline?.title ?? "—")
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .frame(width: 82, alignment: .trailing)
         }
     }
 

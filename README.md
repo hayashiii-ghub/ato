@@ -10,21 +10,22 @@ names so existing helper settings and updates continue to work.
 1. Download the [DMG](https://github.com/hayashiii-ghub/ato/releases/latest/download/usage-rings-macos.dmg)
    or ZIP from [Releases](https://github.com/hayashiii-ghub/ato/releases).
 2. Quit ato? and replace the app in its existing Applications folder.
-3. Open it, read the connection explanation, and choose **Enable AI usage**.
+3. Open it, read the connection explanation, and choose **Enable**.
 4. Desktop → **Edit Widgets** → **ato? → AI Usage**.
 
 The app is ad-hoc signed, **not notarized**. If macOS blocks it and you trust the
 source, use Apple's [per-app approval](https://support.apple.com/102445).
-Use **Check for Updates…** for later updates. Download verification:
+Use **Updates…** for later updates. Download verification:
 save all five release assets together, then `shasum -a 256 -c usage-rings-macos.sha256`.
 
-Select a ring for details; **Change service** replaces it or swaps existing selections. Drag to reorder.
+Choose a service in each row; selecting an existing service swaps the two rows.
+Drag a ring to reorder. The chevron shows all limits and reset times.
 Only the four selected services are monitored. **Auto** shows the lowest remaining
 main window; **5 hours** and **Week** select a period. Choices also apply to the widget.
 Missing, failed, expired, or 20-minute-old readings show **—**.
 
 Monitoring refreshes every five minutes and after waking. Closing the window keeps
-it running; **Quit ato?** stops future polling, and reopening resumes it.
+it running; **Quit** stops future polling, and reopening resumes it.
 An in-flight request may finish. Widget updates follow macOS scheduling.
 Claude and Gemini receive usage through CLI activity, so polling alone does not
 produce a new reading. Gemini quota data that stays unchanged for 20 minutes also shows **—**.
@@ -85,7 +86,7 @@ To disconnect, remove only this invocation; remove source-installer setup with
 Adjust the app path as needed; use `--help` for options. The CLI reads the running
 app without refreshing or changing settings.
 
-Open **AI Tools** in ato? and choose **Set Up** for Codex, Claude Code, Cursor,
+In **AI Tools** on ato?'s main screen, choose **Set Up** for Codex, Claude Code, Cursor,
 or Antigravity. This links `~/.local/bin/usage-rings`, copies the bundled
 [skill](Skills/usage-rings-budget/SKILL.md), and merges that assistant's budget hook.
 Antigravity receives skills for both its CLI and App/IDE. Setup uses the native
