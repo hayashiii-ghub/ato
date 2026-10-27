@@ -22,5 +22,7 @@ jobs:
         with:
           bun-version: 1.4.2
       - run: bun install --frozen-lockfile
+      - name: Audit site dependencies
+        run: bun audit --audit-level=high
       - run: bun run check
       - run: bun run test
