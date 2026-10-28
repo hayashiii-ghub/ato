@@ -1,77 +1,35 @@
 # ato?
 
-Keep user setup/privacy in [README.md](README.md) and repository instructions here.
-Retain `LICENSE`, `THIRD_PARTY_NOTICES.md`, and functional `Skills/*/SKILL.md`;
-ask before adding other documentation. Keep the app independent of cc:.
+Keep user guidance in `README.md` and repository procedures here. Retain required licenses and functional `Skills/*/SKILL.md`; ask before adding other documentation. Keep ato? independent of cc:.
 
 ## Boundaries
 
-- `Sources/UsageRings`: host, providers, views, stores. `UsageCore`: shared models,
-  parsing, sanitized persistence, rings/resources. `UsageRingsWidget`: sandboxed
-  widget. `UsageRingsCLI` and `Skills/usage-rings-budget`: read-only agent interface.
-- AI Tools setup belongs to the host app, not the CLI. Merge only owned budget
-  hooks; preserve edited skills, unrelated settings, status lines, and client trust.
-  Bundle/sign the native `UsageRingsBudgetHook`; setup must not enable monitoring.
-- Preserve explicit consent, selected-provider polling, and display preferences.
-  The CLI must not launch/enable the app, refresh providers, read credentials, or change settings.
-- Provider CLIs own sign-in. Do not add shell execution, login flows, or credential
-  fallbacks. Never expose credentials/private keys in logs, caches, or assets.
-- Claude/Gemini use passive status line caches. Never launch Antigravity to poll usage.
-  Preserve custom status lines and unrelated settings during helper setup.
-- Unknown, failed, expired, or 20-minute-old usage is unavailable. Preserve actual
-  observation times, including unchanged Gemini quota data; never infer a restored
-  allowance. Keep README's security FAQ anchor.
-- Antigravity provides no quota observation timestamp or sequence. Filter the
-  current quota and latest 256 distinct fingerprints without stopping new input
-  at capacity. Older evicted replays may appear new; this is a known limit, not
-  a guarantee of server freshness.
-- `site/` owns the website's Bun/TypeScript source and static assets. Edit `src/`
-  and `public/`, not generated `dist/`. Vercel builds `site/` and publishes `dist/`
-  at `https://ato.shigoto.dev` from `main`; pull requests get previews. Retain the
-  former Sites identity for old-URL redirects. Keep feature claims aligned with
-  the published app release.
-- The visible brand is `ato?`. Keep the `Usage Rings.app` path, bundle IDs,
-  widget kind, CLI name, cache paths, and update URLs compatible with existing installs.
-- Keep the old `usage-rings` repository name unused; installed update URLs rely on its GitHub redirect.
+- `Sources/UsageRings`: host app; `UsageCore`: models/providers/cache; `UsageRingsWidget`: sandboxed widget; `UsageRingsCLI` and `Skills/usage-rings-budget`: read-only agent interface.
+- Preserve consent, selected-provider polling, display settings, and original observation times. Unknown, failed, expired, or 20-minute-old readings are unavailable; resets do not imply restored allowance.
+- Antigravity provides no observation timestamp/sequence. Filter the current value and latest 256 fingerprints without stopping new input at capacity; evicted replays may appear new.
+- Provider CLIs own sign-in. Never add shell/login/credential fallbacks, expose secrets, or launch Antigravity to poll. Claude/Gemini read passive status-line caches. Preserve custom status lines.
+- AI Tools setup belongs to the host. Bundle/sign `UsageRingsBudgetHook`; merge only owned hooks and preserve edited skills, unrelated settings, status lines, and client trust. Setup must not enable monitoring. The CLI must not launch the app, refresh providers, read credentials, or change settings.
+- Visible brand: `ato?`. Preserve `Usage Rings.app`, bundle IDs, widget kind, CLI/cache paths, and update URLs. Leave the old `usage-rings` repository name unused so installed GitHub redirects work.
+- `site/src/` and `site/public/` are website sources; do not edit generated `dist/`. Vercel publishes `site/dist/` at `https://ato.shigoto.dev` from `main`; PRs get previews. Preserve former Sites redirect identity and README anchors linked from the app/site. Claims must match the published release.
 
-## Validate
+## Development
 
-Run `make check`, then `APP_VERSION="$app_version" APP_BUILD="$app_build" make build`.
-Use `x.y.z` and build 1–9999; increase the installed/published build and never lower
-its version. Unspecified development defaults are 0.1.0/build 1. `SOURCE_REVISION`
-must match full HEAD; dirty builds are marked. `make run` builds/opens;
-`make install` follows [README](README.md#build-from-source).
+Requires Xcode. Set `app_version=x.y.z` and `app_build=1–9999`, keeping the version at least as high as installed/published and increasing its build number:
 
-For website changes, install with `cd site && bun install --frozen-lockfile`, then
-run `make site-check` and `make site-build` from the repository root, then
-`cd site && bun run test`. Verify the language switch, demo controls, and
-desktop/mobile layout when changing the browser code.
+```sh
+make check
+APP_VERSION="$app_version" APP_BUILD="$app_build" make build
+```
 
-`swift run WidgetPreview dist/widget-preview.png` renders synthetic small/medium,
-light/dark fixtures; a second image argument adds comparison. It does not verify
-WidgetKit scheduling or desktop compositing. Test configured app launches with
-`-SUEnableAutomaticChecks NO`, without changing the saved update preference.
+`make run` builds/opens; `APP_VERSION="$app_version" APP_BUILD="$app_build" make install` replaces `~/Applications/Usage Rings.app`, restarts its widget, and opens it. Source installation preserves custom Claude/Antigravity status lines. `SOURCE_REVISION` must match full HEAD; dirty builds are marked.
+
+Website: use Bun 1.4.2; run `cd site && bun install --frozen-lockfile`, then root `make site-check` and `make site-build`, then `cd site && bun run test`. `bun run dev` previews the site. Browser changes require desktop/mobile, language-switch, and demo-control checks.
+
+`swift run WidgetPreview dist/widget-preview.png` renders synthetic fixtures, not WidgetKit scheduling/compositing. Launch configured test apps with `-SUEnableAutomaticChecks NO` without changing saved preferences. After editing `Assets/AppIcon.svg`, run `swift run IconAssets` to regenerate native/web icons.
 
 ## Release
 
-- Package from a clean committed checkout after choosing version/build and running
-  the checks/build above. Default: **ad-hoc signed, unnotarized, macOS 26+, arm64**.
-  Use `make package-unnotarized`; `make package-draft` creates a review ZIP.
-- Keep bundle IDs fixed. Sign host/widget/helpers; preserve Sparkle's official
-  nested signatures for ad-hoc builds. Packaging verifies bundles and archives;
-  it does not install or launch the app.
-- Local packaging is allowed. Initial GitHub releases stay drafts; uploading or
-  publishing assets requires explicit approval. Publish the matching five files:
-  `usage-rings-macos.dmg`, `usage-rings-macos.zip`, `appcast.xml`,
-  `usage-rings-macos.json`, `usage-rings-macos.sha256`. Verify checksums/public responses;
-  keep ZIP URLs immutable at `releases/download/v<version>/usage-rings-macos.zip`.
-  Update README's source-only notice only after public availability is verified.
-- Sparkle uses `script/sparkle-config.json`, GitHub's latest-release appcast, and
-  Keychain account `work.hayashigoto.UsageRings`. Packaging signs the final ZIP and
-  checks its public key. Never export/log the private key; key replacement requires
-  release-operator approval. Missing public key permits debug builds only.
-- Optional `make package` requires matching Developer ID teams, hardened runtime,
-  secure timestamps, accepted notarization with a stapled ticket, and Gatekeeper
-  assessment. `CODE_SIGN_IDENTITY` is an installed Developer ID Application SHA-1
-  hash (`-` means ad-hoc). Never remove quarantine, disable Gatekeeper, or silently
-  fall back from notarized to unnotarized distribution.
+- Use a clean committed checkout and validated version/build. `make package-unnotarized` packages ad-hoc signed, unnotarized, macOS 26+/arm64 builds; `make package-draft` creates a review ZIP. Packaging does not install/launch.
+- Preserve bundle IDs and Sparkle's nested signatures. Sign host, widget, and helpers. Local packaging is allowed; initial GitHub releases stay drafts, and upload/publication requires explicit approval.
+- Publish matching `usage-rings-macos.{dmg,zip,json,sha256}` and `appcast.xml`; verify checksums/public responses. Keep versioned ZIP URLs immutable. Packaging signs the final ZIP using `script/sparkle-config.json` and Keychain account `work.hayashigoto.UsageRings`; never export/log the private key. Key replacement requires operator approval; a missing public key permits debug builds only.
+- `make package` additionally requires matching Developer ID teams, hardened runtime, secure timestamps, accepted/stapled notarization, and Gatekeeper assessment. `CODE_SIGN_IDENTITY` is the installed Developer ID SHA-1 (`-` means ad-hoc). Never remove quarantine, disable Gatekeeper, or silently downgrade notarized distribution.
