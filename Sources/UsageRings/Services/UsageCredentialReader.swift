@@ -7,18 +7,20 @@ enum UsageCredentialReader {
         try cursorCookie(token: cursorToken(home: home), now: Date())
     }
 
-    static func cursorToken(home: URL = FileManager.default.homeDirectoryForCurrentUser) throws -> String {
+    static func cursorToken(home: URL = FileManager.default.homeDirectoryForCurrentUser,
+                            allowingKeychainInteraction: Bool = false) throws -> String {
         let location = home.appendingPathComponent("Library/Application Support/Cursor/User/globalStorage/state.vscdb")
         guard FileManager.default.fileExists(atPath: location.path) else { throw UsageReadError.missingSession }
-        let token: String
+        let storedToken: String
         do {
-            token = try readCursorToken(location: location, immutable: false)
+            storedToken = try readCursorToken(location: location, immutable: false)
         } catch {
             // Immutable mode must never ignore an active WAL containing a newer account/session.
             guard !FileManager.default.fileExists(atPath: location.path + "-wal"),
                   !FileManager.default.fileExists(atPath: location.path + "-shm") else { throw error }
-            token = try readCursorToken(location: location, immutable: true)
+            storedToken = try readCursorToken(location: location, immutable: true)
         }
+        let token = try CursorSafeStorage.decode(storedToken, allowingInteraction: allowingKeychainInteraction)
         _ = try cursorCookie(token: token, now: Date())
         return token
     }

@@ -12,6 +12,7 @@ final class UsageStore: ObservableObject {
     private static let preferredPeriodsKey = "usagePreferredPeriods"
     @Published private(set) var snapshot: UsageSnapshot = .empty
     @Published private(set) var isRefreshing = false
+    @Published private(set) var isAuthorizingCursor = false
     @Published private(set) var sharingError = false
     @Published private(set) var isEnabled: Bool
     @Published private(set) var needsConsent: Bool
@@ -19,6 +20,7 @@ final class UsageStore: ObservableObject {
     @Published private(set) var preferredPeriods: [UsageService: UsagePeriod]
     private let defaults: UserDefaults
     private let fetch: @Sendable (UsageService) async -> ServiceUsage
+    private let authorizeCursor: @Sendable () async -> Void
     private let onPublish: @MainActor () -> Void
     private var pollingTask: Task<Void, Never>?
     private var wakeObserver: NSObjectProtocol?
@@ -27,11 +29,17 @@ final class UsageStore: ObservableObject {
 
     init(defaults: UserDefaults = .standard,
          fetch: @escaping @Sendable (UsageService) async -> ServiceUsage = { await UsageClient.fetch($0) },
+         authorizeCursor: @escaping @Sendable () async -> Void = {
+             await Task.detached(priority: .userInitiated) {
+                 _ = try? UsageCredentialReader.cursorToken(allowingKeychainInteraction: true)
+             }.value
+         },
          onPublish: @escaping @MainActor () -> Void = {
              WidgetCenter.shared.reloadTimelines(ofKind: UsageSnapshot.widgetKind)
          }) {
         self.defaults = defaults
         self.fetch = fetch
+        self.authorizeCursor = authorizeCursor
         self.onPublish = onPublish
         // The pre-consent preference is preserved, but cannot authorize this connection method.
         let hasConsent = defaults.integer(forKey: Self.consentKey) == Self.consentVersion
@@ -116,8 +124,24 @@ final class UsageStore: ObservableObject {
         if isEnabled { start() } else { publish() }
     }
 
+    var needsCursorAuthorization: Bool {
+        isEnabled && !needsConsent && ringOrder.contains { service in
+            (service == .cursor || service == .grokBot) && snapshot.usage(for: service).state == .setupRequired
+        }
+    }
+
+    func authorizeCursorAccess() async {
+        guard needsCursorAuthorization, !isRefreshing, !isAuthorizingCursor else { return }
+        isAuthorizingCursor = true
+        let requestGeneration = generation
+        await authorizeCursor()
+        isAuthorizingCursor = false
+        guard generation == requestGeneration, isEnabled, !Task.isCancelled else { return }
+        await refresh()
+    }
+
     func refresh() async {
-        guard !needsConsent, isEnabled, !isRefreshing else { return }
+        guard !needsConsent, isEnabled, !isRefreshing, !isAuthorizingCursor else { return }
         isRefreshing = true
         let requestGeneration = generation
         defer {

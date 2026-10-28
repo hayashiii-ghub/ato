@@ -24,6 +24,13 @@ Sign in separately; ato? does not start login flows. API-key billing and pooled 
 | Cursor / Grok | Cursor desktop account |
 | Gemini | Antigravity CLI 1.1.11+ (`agy`) with Google and its helper below; Gemini CLI is unsupported |
 
+Source builds support Cursor's encrypted sign-in storage. If Cursor or Grok asks
+for access, choose **Allow Cursor Access…** in ato? and approve the macOS Keychain
+prompt. **Always Allow** keeps permission after reopening; an app update may ask
+again because the app is ad-hoc signed. **Allow Once** lasts for the current app
+session. Automatic refresh never opens a Keychain prompt; denied access shows
+**—** until you choose to retry.
+
 ### Claude helper
 
 Merge into `~/.claude/settings.json` (or `$CLAUDE_CONFIG_DIR/settings.json`), preserving other settings and custom status lines:
@@ -58,8 +65,16 @@ Budget notices do not interrupt model requests; unavailable data stays quiet.
 
 ## Security and data FAQ
 
-Provider CLIs own authentication. Cursor/Grok use Cursor's session for their HTTPS usage endpoints;
-Claude/Gemini use local status-line caches. No conversations, analytics, or usage are sent to the developer.
+**Reads:** Codex uses its CLI, which manages authentication/cache.
+Cursor/Grok read Cursor's session for HTTPS requests to `cursor.com` and `api2.cursor.sh`.
+For Cursor's encrypted storage, source builds read only the `Cursor Safe Storage`
+Keychain item, with interactive permission requested only by **Allow Cursor Access…**.
+The derived decryption key stays only in the host app's memory until it quits;
+neither the key nor decrypted sign-in is written to disk. No Keychain item or
+Cursor setting is changed by ato?; macOS manages the permission you grant.
+Redirects are rejected, and these internal endpoints may change. Claude/Gemini read
+only their helpers' usage caches; ato? does not launch Antigravity. No conversations,
+analytics, or usage go to the developer.
 
 Other processes on the same Mac can read usage, times, and display settings at `127.0.0.1:52388/v1/usage`, without credentials.
 Helper/widget caches are owner-only; sharing CLI output with an AI shares those values with its service.

@@ -8,6 +8,9 @@ enum UsageDisplayText {
         switch usage.state {
         case .disabled: return "Enable AI usage to connect."
         case .setupRequired:
+            if usage.service == .cursor || usage.service == .grokBot {
+                return "Allow Cursor sign-in access in ato? to update usage."
+            }
             return usage.service == .gemini
                 ? "Connect the Antigravity status-line helper, then use agy. See the README for setup."
                 : "Install or update the Codex CLI, then refresh."

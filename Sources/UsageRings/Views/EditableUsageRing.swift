@@ -98,9 +98,13 @@ struct EditableUsageRing: View {
             .frame(width: 82, height: 28)
         } else {
             Text(usage.headline?.title ?? "—")
+                .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
-                .frame(width: 82, alignment: .trailing)
+                .frame(width: 82, height: 28)
+                .background(.quaternary, in: Capsule())
+                .accessibilityLabel("Period for \(service.name)")
+                .accessibilityValue(usage.headline?.title ?? "Unavailable")
         }
     }
 

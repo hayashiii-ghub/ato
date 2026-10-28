@@ -25,6 +25,8 @@ enum UsageClient {
                 request.setValue("Bearer \(try UsageCredentialReader.cursorToken())", forHTTPHeaderField: "Authorization")
                 return try UsageResponseParser.grokBot(await read(request))
             }
+        } catch CursorSafeStorage.Failure.permissionRequired {
+            return ServiceUsage(service: service, state: .setupRequired)
         } catch UsageReadError.missingSession, UsageReadError.expiredSession {
             return ServiceUsage(service: service, state: .signInRequired)
         } catch {
