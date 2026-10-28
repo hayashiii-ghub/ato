@@ -30,6 +30,9 @@ prompt. **Always Allow** keeps permission after reopening; an app update may ask
 again because the app is ad-hoc signed. **Allow Once** lasts for the current app
 session. Automatic refresh never opens a Keychain prompt; denied access shows
 **—** until you choose to retry.
+Source builds also use Cursor's reported allowance period and reset time: monthly
+for legacy plans, or weekly for current shared-allowance plans. A weekly reading
+does not reuse monthly breakdowns or a monthly billing reset.
 
 ### Claude helper
 
@@ -49,6 +52,7 @@ Merge into `~/.gemini/antigravity-cli/settings.json`, preserving other settings 
 
 Use the actual app path, including `$HOME/Applications` if applicable. Both helpers receive readings through CLI activity;
 polling alone creates no new observation. Disconnect by removing only the helper invocation.
+Source builds stop showing explicitly disabled limits, including their cached values.
 
 ## CLI and AI skill
 
@@ -66,7 +70,8 @@ Budget notices do not interrupt model requests; unavailable data stays quiet.
 ## Security and data FAQ
 
 **Reads:** Codex uses its CLI, which manages authentication/cache.
-Cursor/Grok read Cursor's session for HTTPS requests to `cursor.com` and `api2.cursor.sh`.
+Cursor/Grok read Cursor's session for HTTPS requests to `api2.cursor.sh`
+(older builds also use `cursor.com`).
 For Cursor's encrypted storage, source builds read only the `Cursor Safe Storage`
 Keychain item, with interactive permission requested only by **Allow Cursor Access…**.
 The derived decryption key stays only in the host app's memory until it quits;

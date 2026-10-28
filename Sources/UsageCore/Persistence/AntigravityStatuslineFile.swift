@@ -31,9 +31,12 @@ public enum AntigravityStatuslineFile {
     }
 
     @discardableResult
-    public static func write(_ usage: ServiceUsage, to location: URL = url()) throws -> AntigravityStatuslineCache {
+    public static func write(_ usage: ServiceUsage, disabling disabledWindowIDs: Set<String> = [],
+                             to location: URL = url()) throws -> AntigravityStatuslineCache {
         guard valid(usage), let observedAt = usage.updatedAt,
-              let quotaReset = usage.windows.compactMap(\.resetsAt).max() else { throw UsageReadError.invalidResponse }
+              disabledWindowIDs.isSubset(of: ["gemini-5h", "gemini-weekly"]),
+              usage.windows.allSatisfy({ !disabledWindowIDs.contains($0.id) }) else { throw UsageReadError.invalidResponse }
+        let quotaReset = usage.windows.compactMap(\.resetsAt).max() ?? observedAt
         let folder = location.deletingLastPathComponent()
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true,
                                                 attributes: [.posixPermissions: 0o700])
@@ -47,18 +50,32 @@ public enum AntigravityStatuslineFile {
         encoder.outputFormatting = .sortedKeys
         let normalized = usage.windows.sorted { $0.id < $1.id }
         let marker = SHA256.hash(data: try encoder.encode(normalized)).map { String(format: "%02x", $0) }.joined()
-        // Delayed writers can evict the current marker, so compare the current quota independently.
-        if let previous, previous.usage.windows.sorted(by: { $0.id < $1.id }) == normalized
-            || previous.quotaMarkers.contains(marker) {
-            return previous
-        }
         // The payload has no source timestamp; replay detection is limited to recent quotas.
-        let markers = Array(((previous?.quotaMarkers ?? []) + [marker]).suffix(256))
+        var markers = previous?.quotaMarkers ?? []
+        if !markers.contains(marker) { markers = Array((markers + [marker]).suffix(256)) }
         // Retain the v1 reset horizon for installed readers, without gating new observations.
         let historyExpiresAt = max(previous?.quotaHistoryExpiresAt ?? quotaReset, quotaReset)
         var current = usage
-        if let previous, let previousTime = previous.usage.updatedAt, observedAt < previousTime {
-            current = previous.usage
+        if let previous, let previousTime = previous.usage.updatedAt {
+            var retained = previous.usage
+            if observedAt >= previousTime {
+                if usage.state == .unavailable {
+                    if retained.state != .unavailable { retained = usage }
+                } else if retained.state == .ready && !disabledWindowIDs.isEmpty {
+                    retained.windows.removeAll { disabledWindowIDs.contains($0.id) }
+                    if retained.windows.isEmpty {
+                        retained.state = .unavailable
+                        retained.updatedAt = observedAt
+                    }
+                }
+            }
+            // Disable signals remove old allowances even when the remaining quota is a replay.
+            // Still-available windows keep their actual observation time on identical/replayed data.
+            if observedAt < previousTime
+                || retained.windows.sorted(by: { $0.id < $1.id }) == normalized
+                || (usage.state == .ready && previous.quotaMarkers.contains(marker)) {
+                current = retained
+            }
         }
         let cache = AntigravityStatuslineCache(usage: current, quotaMarkers: markers,
                                              quotaHistoryExpiresAt: historyExpiresAt, version: 1)
@@ -71,8 +88,10 @@ public enum AntigravityStatuslineFile {
     }
 
     private static func valid(_ usage: ServiceUsage) -> Bool {
-        guard usage.service == .gemini, usage.state == .ready, usage.preferredPeriod == nil,
-              usage.updatedAt?.timeIntervalSinceReferenceDate.isFinite == true,
+        guard usage.service == .gemini, usage.preferredPeriod == nil,
+              usage.updatedAt?.timeIntervalSinceReferenceDate.isFinite == true else { return false }
+        if usage.state == .unavailable { return usage.windows.isEmpty }
+        guard usage.state == .ready,
               !usage.windows.isEmpty, usage.windows.count <= 2,
               Set(usage.windows.map(\.id)).count == usage.windows.count else { return false }
         return usage.windows.allSatisfy { window in

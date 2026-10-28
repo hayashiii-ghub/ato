@@ -14,8 +14,8 @@ do {
         guard data.count <= 1_048_576 else { exit(0) }
     }
     if gemini {
-        let usage = try AntigravityUsageParser.parse(data)
-        let cache = try AntigravityStatuslineFile.write(usage)
+        let observation = try AntigravityUsageParser.parseObservation(data)
+        let cache = try AntigravityStatuslineFile.write(observation.usage, disabling: observation.disabledWindowIDs)
         let now = Date()
         let text = cache.usage.windows.compactMap { window in
             cache.usage.remainingPercent(for: window, at: now).map { "\(window.title): \(Int($0.rounded()))% left" }

@@ -2,7 +2,9 @@ import UsageCore
 import Foundation
 
 enum UsageClient {
-    static func fetch(_ service: UsageService) async -> ServiceUsage {
+    static func fetch(_ service: UsageService,
+                      cursorToken: @Sendable () throws -> String = { try UsageCredentialReader.cursorToken() },
+                      read: @Sendable (URLRequest) async throws -> Data = { try await readResponse($0) }) async -> ServiceUsage {
         do {
             switch service {
             case .codex:
@@ -10,19 +12,15 @@ enum UsageClient {
             case .gemini:
                 return await AntigravityUsageClient.fetch()
             case .cursor:
-                var request = URLRequest(url: URL(string: "https://cursor.com/api/usage-summary")!)
-                request.setValue(try UsageCredentialReader.cursorCookie(), forHTTPHeaderField: "Cookie")
-                request.setValue("https://cursor.com", forHTTPHeaderField: "Origin")
-                return try UsageResponseParser.cursor(await read(request))
+                let token = try cursorToken()
+                async let plan = read(dashboardRequest(.planInfo, token: token))
+                async let usage = read(dashboardRequest(.currentPeriodUsage, token: token))
+                let (planData, usageData) = try await (plan, usage)
+                return try UsageResponseParser.cursor(usageData, planInfo: planData)
             case .claude:
                 return ClaudeStatuslineFile.read()?.usage ?? ServiceUsage(service: .claude, state: .signInRequired)
             case .grokBot:
-                var request = URLRequest(url: URL(string: "https://api2.cursor.sh/aiserver.v1.DashboardService/GetSandUsageStatus")!)
-                request.httpMethod = "POST"
-                request.httpBody = Data("{}".utf8)
-                request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-                request.setValue("1", forHTTPHeaderField: "Connect-Protocol-Version")
-                request.setValue("Bearer \(try UsageCredentialReader.cursorToken())", forHTTPHeaderField: "Authorization")
+                let request = dashboardRequest(.sandUsageStatus, token: try cursorToken())
                 return try UsageResponseParser.grokBot(await read(request))
             }
         } catch CursorSafeStorage.Failure.permissionRequired {
@@ -34,7 +32,23 @@ enum UsageClient {
         }
     }
 
-    private static func read(_ input: URLRequest) async throws -> Data {
+    private enum DashboardMethod: String {
+        case planInfo = "GetPlanInfo"
+        case currentPeriodUsage = "GetCurrentPeriodUsage"
+        case sandUsageStatus = "GetSandUsageStatus"
+    }
+
+    private static func dashboardRequest(_ method: DashboardMethod, token: String) -> URLRequest {
+        var request = URLRequest(url: URL(string: "https://api2.cursor.sh/aiserver.v1.DashboardService/\(method.rawValue)")!)
+        request.httpMethod = "POST"
+        request.httpBody = Data("{}".utf8)
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("1", forHTTPHeaderField: "Connect-Protocol-Version")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        return request
+    }
+
+    private static func readResponse(_ input: URLRequest) async throws -> Data {
         let session = UsageHTTPSession.make(requestTimeout: 20, resourceTimeout: 30)
         defer { session.invalidateAndCancel() }
         var request = input
