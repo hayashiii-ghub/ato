@@ -24,13 +24,13 @@ Sign in separately; ato? does not start login flows. API-key billing and pooled 
 | Cursor / Grok | Cursor desktop account |
 | Gemini | Antigravity CLI 1.1.11+ (`agy`) with Google and its helper below; Gemini CLI is unsupported |
 
-Source builds support Cursor's encrypted sign-in storage. If Cursor or Grok asks
+ato? v0.2.8 supports Cursor's encrypted sign-in storage. If Cursor or Grok asks
 for access, choose **Allow Cursor Access…** in ato? and approve the macOS Keychain
 prompt. **Always Allow** keeps permission after reopening; an app update may ask
 again because the app is ad-hoc signed. **Allow Once** lasts for the current app
 session. Automatic refresh never opens a Keychain prompt; denied access shows
 **—** until you choose to retry.
-Source builds also use Cursor's reported allowance period and reset time: monthly
+ato? also uses Cursor's reported allowance period and reset time: monthly
 for legacy plans, or weekly for current shared-allowance plans. A weekly reading
 does not reuse monthly breakdowns or a monthly billing reset.
 
@@ -52,7 +52,7 @@ Merge into `~/.gemini/antigravity-cli/settings.json`, preserving other settings 
 
 Use the actual app path, including `$HOME/Applications` if applicable. Both helpers receive readings through CLI activity;
 polling alone creates no new observation. Disconnect by removing only the helper invocation.
-Source builds stop showing explicitly disabled limits, including their cached values.
+Explicitly disabled limits, including their cached values, are not shown.
 
 ## CLI and AI skill
 
@@ -72,7 +72,7 @@ Budget notices do not interrupt model requests; unavailable data stays quiet.
 **Reads:** Codex uses its CLI, which manages authentication/cache.
 Cursor/Grok read Cursor's session for HTTPS requests to `api2.cursor.sh`
 (older builds also use `cursor.com`).
-For Cursor's encrypted storage, source builds read only the `Cursor Safe Storage`
+For Cursor's encrypted storage, ato? reads only the `Cursor Safe Storage`
 Keychain item, with interactive permission requested only by **Allow Cursor Access…**.
 The derived decryption key stays only in the host app's memory until it quits;
 neither the key nor decrypted sign-in is written to disk. No Keychain item or
