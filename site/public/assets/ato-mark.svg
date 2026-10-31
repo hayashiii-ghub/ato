@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="50" height="28" viewBox="0 -2 50 28" shape-rendering="geometricPrecision">
+  <title>ato? mark</title>
+  <g fill="none" stroke="#f2f3f1" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 10.552 12 C 10.552 9.05 9.056 7 6.676 7 C 4.296 7 2.8 9.05 2.8 12 C 2.8 14.95 4.296 17 6.676 17 C 9.056 17 10.552 14.95 10.552 12 Z M 10.552 7 V 17"/>
+    <path d="M 17.5 4.4 V 13.7 C 17.5 16.05 18.45 17 20.05 17 C 20.75 17 21.3 16.8 21.9 16.4 M 14.5 8.2 H 21.2"/>
+    <path d="M 33.652 12 C 33.652 9.05 32.156 7 29.776 7 C 27.396 7 25.9 9.05 25.9 12 C 25.9 14.95 27.396 17 29.776 17 C 32.156 17 33.652 14.95 33.652 12 Z"/>
+    <path d="M 38.6 6.8 C 38.95 5 40.3 4 42.4 4 C 44.65 4 46.15 5.3 46.15 7.2 C 46.15 8.8 45.3 9.6 43.8 10.5 C 42.65 11.2 42.2 11.85 42.2 12.5"/>
+  </g>
+  <circle cx="42.2" cy="17" r="1.4" fill="#e8eeee"/>
+</svg>
