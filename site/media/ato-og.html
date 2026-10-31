@@ -12,8 +12,8 @@
   html, body { width: 1200px; height: 630px; margin: 0; overflow: hidden; }
   body { background: #030304; color: #f2f0eb; font-family: OGSans, sans-serif; -webkit-font-smoothing: antialiased; }
   .og-artwork { position: relative; width: 1200px; height: 630px; overflow: hidden; }
-  .og-brand { position: absolute; top: 24px; left: 46px; height: 44px; font: 400 42px/1 OGSerif, serif; }
-  .og-brand img { width: 64px; height: 44px; object-fit: contain; }
+  .og-brand { position: absolute; top: 24px; left: 46px; height: 44px; }
+  .og-brand img { display: block; width: auto; height: 44px; }
   .og-domain { position: absolute; top: 37px; right: 48px; margin: 0; color: #a3a29e; font-size: 14px; }
   .og-artwork h1 { position: absolute; top: 84px; left: 48px; margin: 0; font: 400 68px/1.08 OGSerif, serif; letter-spacing: -.025em; }
   .og-description { position: absolute; top: 165px; left: 50px; margin: 0; font: 400 18px/1.6 OGSans, sans-serif; color: #c7c6c0; }
@@ -29,7 +29,7 @@
 </style>
 </head>
 <body><main class="og-artwork">
-  <div class="og-brand">ato?</div>
+  <div class="og-brand"><img src="../public/assets/ato-mark.svg" width="79" height="44" alt="ato?"></div>
   <p class="og-domain">ato.shigoto.dev</p>
   <h1>AI usage widget</h1>
   <p class="og-description">Your AI allowance in a quiet corner of your Mac.</p>
