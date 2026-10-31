@@ -5,17 +5,21 @@ type Provider = { name: string; asset: string };
 type Reading = number | null;
 type DemoState = "normal" | "low" | "missing";
 
-const providers: readonly Provider[] = [
+const allProviders: readonly Provider[] = [
   { name: "Codex", asset: "codex.svg" },
   { name: "Claude", asset: "claude.svg" },
   { name: "Gemini", asset: "gemini.svg" },
-  { name: "Grok", asset: "grokBot.svg" }
+  { name: "Grok", asset: "grokBot.svg" },
+  { name: "Cursor", asset: "cursor.svg" }
 ];
-const samples: Record<DemoState, readonly Reading[]> = {
-  normal: [82, 64, 48, 71],
-  low: [18, 9, 26, 0],
-  missing: [null, null, null, null]
+const providers: Provider[] = allProviders.slice(0, 4);
+const sampleReadings: Record<string, { normal: number; low: number }> = {
+  Codex: { normal: 82, low: 18 }, Claude: { normal: 64, low: 9 },
+  Gemini: { normal: 48, low: 26 }, Grok: { normal: 71, low: 0 }, Cursor: { normal: 56, low: 12 }
 };
+function sample(provider: Provider, state: DemoState): Reading {
+  return state === "missing" ? null : sampleReadings[provider.name]?.[state] ?? null;
+}
 const circumference = 2 * Math.PI * 44;
 const languageStorageKey = "usage-rings-language";
 let currentState: DemoState = "normal";
@@ -55,9 +59,9 @@ function ring(provider: Provider, value: Reading, showNumber = false): string {
 function renderDemo(state: DemoState = currentState): void {
   currentState = state;
   document.querySelectorAll<HTMLElement>('[data-widget="small"],[data-widget="medium"]').forEach(widget => {
-    widget.innerHTML = providers.map((provider, index) => ring(provider, samples[state][index] ?? null, widget.dataset.widget === "medium")).join("");
+    widget.innerHTML = providers.map(provider => ring(provider, sample(provider, state), widget.dataset.widget === "medium")).join("");
   });
-  element("#preview-status").textContent = state === "missing" ? strings().allUnavailable : strings().samplePrefix + providers.map((provider, index) => provider.name + " " + samples[state][index] + (currentLanguage === "ja" ? "%" : " percent")).join(currentLanguage === "ja" ? "、" : ", ") + (currentLanguage === "ja" ? "。" : ".");
+  element("#preview-status").textContent = state === "missing" ? strings().allUnavailable : strings().samplePrefix + providers.map(provider => provider.name + " " + sample(provider, state) + (currentLanguage === "ja" ? "%" : " percent")).join(currentLanguage === "ja" ? "、" : ", ") + (currentLanguage === "ja" ? "。" : ".");
 }
 
 function updateControlLabels(): void {
@@ -81,9 +85,6 @@ function applyLanguage(language: string | undefined, persist = false): void {
   document.querySelectorAll<HTMLElement>("[data-language]").forEach(button => {
     button.setAttribute("aria-pressed", String(button.dataset.language === language));
   });
-  document.querySelectorAll<HTMLAnchorElement>("[data-apple-guidance]").forEach(link => {
-    link.href = language === "ja" ? "https://support.apple.com/ja-jp/102445" : "https://support.apple.com/en-us/102445";
-  });
   document.title = strings().title;
   const metadata: Record<string, TranslationKey> = {
     'meta[name="description"]': "description",
@@ -96,12 +97,14 @@ function applyLanguage(language: string | undefined, persist = false): void {
   };
   for (const [selector, key] of Object.entries(metadata)) element(selector).setAttribute("content", strings()[key]);
   renderDemo();
-  element('[data-widget="feature"]').innerHTML = providers.map((provider, index) => ring(provider, samples.normal[index] ?? null)).join("");
-  const first = providers[0];
+  renderSelection();
+  const first = allProviders[0];
   if (first) {
-    element('[data-widget="fresh"]').innerHTML = ring(first, 82, true);
-    element('[data-widget="expired"]').innerHTML = ring(first, null, true);
+    for (const [state, value] of [["normal", 82], ["low", 9], ["missing", null]] as const) {
+      element(`[data-widget="state-${state}"]`).innerHTML = ring(first, value, true);
+    }
   }
+  element('[data-widget="install"]').innerHTML = allProviders.slice(0, 4).map(provider => ring(provider, sample(provider, "normal"))).join("");
   updateControlLabels();
 }
 
@@ -113,10 +116,38 @@ document.querySelectorAll<HTMLInputElement>('input[name="demo-state"]').forEach(
     if (input.value === "normal" || input.value === "low" || input.value === "missing") renderDemo(input.value);
   });
 });
+document.querySelectorAll<HTMLInputElement>('input[name="widget-size"]').forEach(input => {
+  input.addEventListener("change", () => {
+    if (input.value !== "both" && input.value !== "small" && input.value !== "medium") return;
+    element<HTMLElement>("#widget-preview").dataset.size = input.value;
+    element<HTMLElement>(".small-example").hidden = input.value === "medium";
+    element<HTMLElement>(".medium-example").hidden = input.value === "small";
+  });
+});
 const appearanceButton = element<HTMLButtonElement>("#appearance");
 appearanceButton.addEventListener("click", () => {
   const light = element("#widget-preview").classList.toggle("preview-light");
   appearanceButton.setAttribute("aria-pressed", String(light));
   updateControlLabels();
+});
+function renderSelection(): void {
+  element('[data-widget="selection"]').innerHTML = providers.map(provider => ring(provider, sample(provider, "normal"), true)).join("");
+  document.querySelectorAll<HTMLSelectElement>("[data-service-slot]").forEach((select, index) => {
+    select.value = providers[index]?.name ?? "";
+    select.setAttribute("aria-label", `${strings().slotLabel} ${index + 1}`);
+  });
+}
+document.querySelectorAll<HTMLSelectElement>("[data-service-slot]").forEach(select => {
+  select.addEventListener("change", () => {
+    const index = Number(select.dataset.serviceSlot);
+    const next = allProviders.find(provider => provider.name === select.value);
+    const previous = providers[index];
+    if (!next || !previous) return;
+    const other = providers.findIndex(provider => provider.name === next.name);
+    if (other >= 0) providers[other] = previous;
+    providers[index] = next;
+    renderSelection();
+    renderDemo();
+  });
 });
 applyLanguage(currentLanguage);
