@@ -11,15 +11,15 @@
   <meta property="og:description" content="5つのサービスから4つのリングを、Macの片隅に。利用枠の残量を、ひと目で確認。">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://ato.shigoto.dev">
-  <meta property="og:image" content="https://ato.shigoto.dev/assets/ato-og.png?v=aabc91bd">
-  <meta property="og:image:width" content="1731">
-  <meta property="og:image:height" content="909">
+  <meta property="og:image" content="https://ato.shigoto.dev/assets/ato-og.png?v=45bc5c8f">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
   <meta property="og:image:type" content="image/png">
   <meta property="og:image:alt" content="ato?。Mac用のAI利用残量ウィジェット。リング表示はサンプルです。">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="ato?">
   <meta name="twitter:description" content="5つのサービスから4つのリングを、Macの片隅に。利用枠の残量を、ひと目で確認。">
-  <meta name="twitter:image" content="https://ato.shigoto.dev/assets/ato-og.png?v=aabc91bd">
+  <meta name="twitter:image" content="https://ato.shigoto.dev/assets/ato-og.png?v=45bc5c8f">
   <meta name="twitter:image:alt" content="ato?。Mac用のAI利用残量ウィジェット。リング表示はサンプルです。">
   <link rel="icon" type="image/png" href="../public/assets/favicon-32.png" sizes="32x32">
   <link rel="apple-touch-icon" href="../public/assets/apple-touch-icon.png" sizes="180x180">
@@ -28,28 +28,32 @@
 </head>
 <body>
   <a class="skip-link" href="#content" data-i18n="skip">本文へ移動</a>
-  <nav class="nav-pill nav-compact" aria-label="メインナビゲーション" data-i18n-aria="primaryLabel">
-    <a class="brand" href="#top"><img src="../public/assets/AppIcon-dark.png" width="24" height="24" alt=""><span>ato?</span></a>
-    <a class="nav-how" href="#how" data-i18n="navHow">使い方</a>
-    <a href="https://github.com/hayashiii-ghub/ato" class="nav-github">GitHub</a>
-  <div class="language-switch" role="group" aria-label="表示言語" data-i18n-aria="languageLabel"><button type="button" data-language="ja" lang="ja" aria-label="日本語で表示" aria-pressed="true">JA</button><button type="button" data-language="en" lang="en" aria-label="Show in English" aria-pressed="false">EN</button></div></nav>
+  <nav class="nav-pill nav-desktop" aria-label="メインナビゲーション" data-i18n-aria="primaryLabel">
+    <a class="brand" href="#top">ato?</a>
+    <div class="nav-links">
+      <a class="nav-how" href="#how" data-i18n="navHow">使い方</a>
+      <a href="https://github.com/hayashiii-ghub/ato" class="nav-github">GitHub</a>
+      <div class="language-switch" role="group" aria-label="表示言語" data-i18n-aria="languageLabel"><button type="button" data-language="ja" lang="ja" aria-label="日本語で表示" aria-pressed="true">JA</button><button type="button" data-language="en" lang="en" aria-label="Show in English" aria-pressed="false">EN</button></div>
+    </div>
+  </nav>
   <main id="content">
-    <section class="hero hero-compact" id="top" aria-labelledby="hero-title">
-      <h1 id="hero-title" data-i18n="heroTitle">AIの残量ウィジェット</h1>
-      <p class="hero-subtitle" data-i18n="heroSubtitle">使っているAIの利用枠を、Macの片隅に。</p>
-      <div class="hero-actions"><a class="button button-primary" href="#install" data-i18n="heroInstall">macOS用をダウンロード</a></div>
-      <p class="hero-meta" data-i18n="heroMeta">macOS 26+ <span>·</span> Apple Silicon</p>
+    <section class="hero hero-desktop" id="top" aria-labelledby="hero-title">
+      <div class="hero-copy"><h1 id="hero-title" data-i18n="heroTitle">AIの残量ウィジェット</h1><p class="hero-subtitle" data-i18n="heroSubtitle">使っているAIの利用枠を、Macの片隅に。</p></div>
+      <div class="hero-action"><div class="hero-actions"><a class="button button-primary" href="#install" data-i18n="heroInstall">macOS用をダウンロード</a></div><p class="hero-meta" data-i18n="heroMeta">macOS 26+ <span>·</span> Apple Silicon</p></div>
     </section>
 
-    <section class="showcase-section showcase-compact" aria-label="ウィジェットの表示プレビュー" data-i18n-aria="previewLabel">
-      <div class="showcase-frame" id="widget-preview" data-size="both">
-        <div class="widget-pair">
-          <div class="widget-example small-example"><div class="widget small-widget" data-widget="small"></div></div>
-          <div class="widget-example medium-example"><div class="widget medium-widget" data-widget="medium"></div></div>
-        </div>
+    <section class="showcase-section desktop-showcase" aria-label="ウィジェットの表示プレビュー" data-i18n-aria="previewLabel">
+      <div class="showcase-frame" id="widget-preview" data-size="medium">
+        <div class="desktop-frame"><div class="desktop-screen">
+          <img class="desktop-scene-image" src="../public/assets/mac-desktop-scene.jpg" width="1643" height="957" alt="" aria-hidden="true" fetchpriority="high">
+          <div class="widget-pair">
+            <div class="widget-example small-example" hidden><div class="widget small-widget" data-widget="small"></div></div>
+            <div class="widget-example medium-example"><div class="widget medium-widget" data-widget="medium"></div></div>
+          </div>
+        </div></div>
         <div class="showcase-bottom">
           <div class="showcase-controls">
-            <fieldset class="demo-states widget-sizes"><legend class="sr-only" data-i18n="sizeLegend">ウィジェットのサイズをプレビュー</legend><label><input type="radio" name="widget-size" value="both" checked><span data-i18n="sizeBoth">両方</span></label><label><input type="radio" name="widget-size" value="small"><span data-i18n="sizeSmall">小サイズ</span></label><label><input type="radio" name="widget-size" value="medium"><span data-i18n="sizeMedium">中サイズ</span></label></fieldset>
+            <fieldset class="demo-states widget-sizes"><legend class="sr-only" data-i18n="sizeLegend">ウィジェットのサイズをプレビュー</legend><label><input type="radio" name="widget-size" value="both"><span data-i18n="sizeBoth">両方</span></label><label><input type="radio" name="widget-size" value="small"><span data-i18n="sizeSmall">小サイズ</span></label><label><input type="radio" name="widget-size" value="medium" checked><span data-i18n="sizeMedium">中サイズ</span></label></fieldset>
             <fieldset class="demo-states"><legend class="sr-only" data-i18n="stateLegend">利用枠の状態をプレビュー</legend><label><input type="radio" name="demo-state" value="normal" checked><span data-i18n="stateNormal">余裕あり</span></label><label><input type="radio" name="demo-state" value="low"><span data-i18n="stateLow">残りわずか</span></label><label><input type="radio" name="demo-state" value="missing"><span data-i18n="stateMissing">取得できません</span></label></fieldset>
             <button id="appearance" class="quiet-button" type="button" aria-pressed="false">ライト表示</button>
           </div>
