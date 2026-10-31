@@ -10,6 +10,20 @@ test("publishes canonical and social links at the product domain", async () => {
   expect(html).not.toContain("hayashiii-gpt.chatgpt.site");
   expect(html).toContain("https://github.com/hayashiii-ghub/ato/releases/latest/download/usage-rings-macos.dmg");
   expect(await Bun.file(resolve(output, "sitemap.xml")).text()).toContain("https://ato.shigoto.dev/");
+
+  const metadata = (name: string) => html.match(new RegExp(`<meta\\b[^>]*(?:property|name)="${name}"[^>]*content="([^"]+)"`))?.[1];
+  const image = await Bun.file(resolve(output, "assets/ato-og.png")).bytes();
+  expect([...image.slice(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
+  const png = new DataView(image.buffer, image.byteOffset, image.byteLength);
+  const width = png.getUint32(16, false);
+  const height = png.getUint32(20, false);
+  expect([width, height]).toEqual([1200, 630]);
+  expect(metadata("og:image:width")).toBe(String(width));
+  expect(metadata("og:image:height")).toBe(String(height));
+  expect(metadata("og:image:type")).toBe("image/png");
+  const hash = new Bun.CryptoHasher("sha256").update(image).digest("hex").slice(0, 8);
+  expect(metadata("og:image")).toBe(`https://ato.shigoto.dev/assets/ato-og.png?v=${hash}`);
+  expect(metadata("twitter:image")).toBe(metadata("og:image"));
 });
 
 test("ships every local HTML asset in the static output", async () => {
