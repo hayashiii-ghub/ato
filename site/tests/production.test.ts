@@ -1,7 +1,17 @@
 import { expect, test } from "bun:test";
 import { resolve } from "node:path";
+import { translations } from "../src/i18n";
 
 const output = resolve(import.meta.dir, "../dist");
+
+test("provides both languages for every published translation hook", async () => {
+  const html = await Bun.file(resolve(output, "index.html")).text();
+  const keys = [...html.matchAll(/data-i18n(?:-aria)?="([^"]+)"/g)].map(match => match[1]!);
+  expect(keys.length).toBeGreaterThan(0);
+  for (const language of ["en", "ja"] as const) {
+    for (const key of keys) expect(Object.hasOwn(translations[language], key), `${language}: ${key}`).toBe(true);
+  }
+});
 
 test("publishes canonical and social links at the product domain", async () => {
   const html = await Bun.file(resolve(output, "index.html")).text();

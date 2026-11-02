@@ -82,6 +82,7 @@
           <figure><div class="state-ring" data-widget="state-missing"></div><figcaption data-i18n="stateUnavailable">取得できないとき</figcaption></figure>
         </div>
         <p class="story-caption" data-i18n="stateUnavailableNote">未取得・失敗・期限切れは「—」</p>
+        <p class="story-caption" data-i18n="notificationsNote">設定で有効にすると、残り20%・10%でMacへ通知。初期はOFF、通知音は任意です。</p>
       </section>
       <section class="tools-section" id="ai-tools" aria-labelledby="ai-tools-title">
         <h2 id="ai-tools-title" data-i18n="toolsTitle">AIにも残量を渡す</h2>
@@ -90,7 +91,7 @@
           <svg class="flow-arrow" viewBox="0 0 64 24" aria-hidden="true"><path d="M2 12h58m-8-8 8 8-8 8" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
           <figure class="notice-example"><figcaption data-i18n="toolsNoticeLabel">作業中のAIへ</figcaption><div class="budget-notice"><img src="../public/assets/codex.svg" width="28" height="28" alt=""><strong data-i18n="toolsNoticeValue">Codexの残り 9%</strong><span data-i18n="toolsNoticeWhen">作業の区切りで共有</span></div></figure>
         </div>
-        <p class="tools-footnote" data-i18n="toolsFootnote">20%・10%・5%未満の新しい段階を通知。処理は中断しません。</p><p class="data-note" data-i18n="toolsShareNote">AIに渡した残量・時刻は、そのAIサービスにも共有されます。</p>
+        <p class="tools-footnote" data-i18n="toolsFootnote">20%・10%未満の新しい段階をAIへ共有。20%未満では作業を続け、10%未満では必須の検証と引き継ぎ情報の整理を優先します。自動で停止・AIの切り替えはしません。</p><p class="data-note" data-i18n="toolsShareNote">AIに渡した残量・時刻は、そのAIサービスにも共有されます。</p>
         <div class="story-links" id="ai-tools-setup"><span class="story-caption" data-i18n="toolsPreviewNote">設定と通知のイメージ</span><a href="https://github.com/hayashiii-ghub/ato#cli-and-ai-skill" class="text-link" data-i18n="toolsGuideShort">AI Toolsの設定手順</a></div>
       </section>
     </section>
