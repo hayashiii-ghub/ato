@@ -5,11 +5,13 @@ import SwiftUI
 final class UsageWindowController {
     private let store: UsageStore
     private let updateController: AppUpdateController
+    private let notifications: UsageNotificationController
     private var window: NSWindow?
 
-    init(store: UsageStore, updateController: AppUpdateController) {
+    init(store: UsageStore, updateController: AppUpdateController, notifications: UsageNotificationController) {
         self.store = store
         self.updateController = updateController
+        self.notifications = notifications
     }
 
     func show() {
@@ -21,7 +23,7 @@ final class UsageWindowController {
             window.contentMinSize = NSSize(width: 440, height: 400)
             window.contentMaxSize = NSSize(width: 560, height: 720)
             let content = NSHostingView(rootView:
-                UsageDetailsView(store: store, updateController: updateController)
+                UsageDetailsView(store: store, updateController: updateController, notifications: notifications)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             )
             // Keep the window size stable when its content changes.

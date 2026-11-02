@@ -181,7 +181,7 @@ public enum AgentBudgetHook {
             let reset = timestamp(resetValue)
             guard sameReset(window["resetsAt"], resetValue),
                   resetValue == nil || resetValue is NSNull || (reset != nil && reset! > now) else { continue }
-            let stage = remaining < 5 ? 5 : remaining < 10 ? 10 : 20
+            let stage = remaining < 10 ? 10 : 20
             valid[id] = Alert(id: id, remaining: remaining, observed: observed, reset: reset,
                               stage: stage, period: window["period"] as? String)
         }

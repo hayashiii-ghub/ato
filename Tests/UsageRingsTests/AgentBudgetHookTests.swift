@@ -21,7 +21,7 @@ struct AgentBudgetHookTests {
 
     @Test func thresholdsAreStrictAndAnInitialReadingEmitsOnlyTheLowestCrossedStage() throws {
         let fixture = try Fixture(now: instant)
-        for (remaining, stage) in [(20.0, nil), (19.9, 20), (10, 20), (9.9, 10), (5, 10), (4, 5), (0, 5)] {
+        for (remaining, stage) in [(20.0, nil), (19.9, 20), (10, 20), (9.9, 10), (5, 10), (4, 10), (0, 10)] {
             let output = fixture.run(report: report(now: instant, remaining: remaining), session: "boundary-\(remaining)")
             if let stage {
                 let text = try notice(object(output), client: .codex)
@@ -47,7 +47,7 @@ struct AgentBudgetHookTests {
 
     @Test func sameConversationIsThrottledBeforeTheCLIAndOtherConversationsAreIndependent() throws {
         let fixture = try Fixture(now: instant)
-        #expect(fixture.run(report: report(now: instant)) != AgentBudgetHook.quiet)
+        #expect(fixture.run(report: report(now: instant, remaining: 19)) != AgentBudgetHook.quiet)
         #expect(fixture.run(report: report(now: instant, remaining: 4)) == AgentBudgetHook.quiet)
         #expect(fixture.calls.count == 1)
         #expect(fixture.run(report: report(now: instant), session: "other") != AgentBudgetHook.quiet)
@@ -62,8 +62,8 @@ struct AgentBudgetHookTests {
         let secondReset = instant.addingTimeInterval(172_800)
         let readings: [(Double, Date?, Int?)] = [
             (19, firstReset, 20), (14, firstReset, nil), (9, firstReset, 10),
-            (15, firstReset, nil), (9, firstReset, nil), (4, firstReset, 5),
-            (8, firstReset, nil), (4, secondReset, 5), (4, firstReset, nil)
+            (15, firstReset, nil), (9, firstReset, nil), (4, firstReset, nil),
+            (8, firstReset, nil), (4, secondReset, 10), (4, firstReset, nil)
         ]
         for (index, reading) in readings.enumerated() {
             fixture.now = instant.addingTimeInterval(Double(index) * 61)
@@ -80,6 +80,27 @@ struct AgentBudgetHookTests {
         #expect(fixture.run(data: nil) == AgentBudgetHook.quiet)
         fixture.now = fixture.now.addingTimeInterval(61)
         #expect(fixture.run(report: report(now: fixture.now, remaining: 4, reset: firstReset)) == AgentBudgetHook.quiet)
+    }
+
+    @Test func legacyFivePercentNoticesStillSuppressDuplicatesUntilANewReset() throws {
+        let fixture = try Fixture(now: instant)
+        let key = try #require(AgentBudgetHook.sessionKey(client: .codex, payload: json(event())))
+        let observed = instant.addingTimeInterval(-64).timeIntervalSince1970
+        do {
+            let store = try AgentBudgetHookState(directory: fixture.state)
+            try store.save([key: AgentBudgetHookSession(
+                checkedAt: instant.addingTimeInterval(-61).timeIntervalSince1970,
+                observed: observed,
+                windows: [AgentBudgetHook.hash("secondary"): AgentBudgetHookWindow(
+                    observed: observed,
+                    notices: [AgentBudgetHookBoundary(reset: instant.addingTimeInterval(86_400).timeIntervalSince1970,
+                                                     stage: 5)])])])
+        }
+        #expect(fixture.run(report: report(now: instant, remaining: 4)) == AgentBudgetHook.quiet)
+        fixture.now = instant.addingTimeInterval(61)
+        let output = fixture.run(report: report(now: fixture.now, remaining: 4,
+                                                reset: instant.addingTimeInterval(172_800)))
+        #expect(try notice(object(output), client: .codex).contains("below 10%"))
     }
 
     @Test func unchangedOlderAndSupersededReadingsNeverCreateAnotherNotice() throws {

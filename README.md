@@ -65,7 +65,9 @@ In Codex CLI, approve the hook through `/hooks` and start a new session. Setup d
 ```
 
 Use `--help` for options. The CLI reads the running app without refreshing providers or changing settings.
-Budget notices do not interrupt model requests; unavailable data stays quiet.
+Budget notices use below-20% and below-10% stages. At 20%, the AI continues the authorized task while avoiding unnecessary exploration and repeated checks. At 10%, it prioritizes required verification and organizing handoff information, without skipping required checks, stopping automatically, or switching assistants. Unavailable data stays quiet.
+
+In **Notifications**, enable **Low usage alerts** to allow macOS notifications at 20% and 10% remaining for each main allowance in your rings. Alerts and sounds start off; **Play a sound** is optional. Each stage is sent once per allowance/reset period, including across app restarts. Old or unavailable readings do not trigger alerts. Monitoring must be enabled and ato? must be running; alerts follow its five-minute refresh, and macOS controls their presentation. **Test Notification** checks delivery; clicking a notification opens ato?.
 
 ## Security and data FAQ
 

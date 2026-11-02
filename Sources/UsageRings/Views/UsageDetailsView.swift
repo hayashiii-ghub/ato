@@ -5,6 +5,7 @@ import SwiftUI
 struct UsageDetailsView: View {
     @ObservedObject var store: UsageStore
     @ObservedObject var updateController: AppUpdateController
+    @ObservedObject var notifications: UsageNotificationController
     @StateObject private var agentTools = AgentToolsController()
 
     var body: some View {
@@ -42,6 +43,8 @@ struct UsageDetailsView: View {
                             cursorAccessExplanation
                         }
                     }
+                    Divider()
+                    UsageNotificationSettings(controller: notifications, monitoringEnabled: store.isEnabled)
                     Divider()
                     AgentToolsView(controller: agentTools)
                     if store.sharingError {
