@@ -27,16 +27,11 @@ struct UsageNotificationSettings: View {
                 .font(SettingsStyle.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
-            HStack {
-                Toggle("Play a sound", isOn: Binding(
-                    get: { controller.soundEnabled },
-                    set: { controller.setSoundEnabled($0) }
-                ))
-                .disabled(!controller.isEnabled)
-                Spacer()
-                Button("Test Notification") { Task { await controller.sendTest() } }
-                    .disabled(!controller.isEnabled || !controller.isAuthorized || controller.isRequestingAuthorization)
-            }
+            Toggle("Play a sound", isOn: Binding(
+                get: { controller.soundEnabled },
+                set: { controller.setSoundEnabled($0) }
+            ))
+            .disabled(!controller.isEnabled)
             if controller.authorizationStatus == .denied {
                 Text("Allow notifications for ato? in System Settings → Notifications.")
                     .font(SettingsStyle.caption)

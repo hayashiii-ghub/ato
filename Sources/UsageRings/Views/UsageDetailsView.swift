@@ -76,6 +76,7 @@ struct UsageDetailsView: View {
             .help("Help")
             Button("Quit") { NSApp.terminate(nil) }
                 .keyboardShortcut("q", modifiers: .command)
+                .focusEffectDisabled()
                 .disabled(agentTools.isWorking)
         }
         .frame(minHeight: 28)

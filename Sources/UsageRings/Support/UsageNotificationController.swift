@@ -95,22 +95,6 @@ final class UsageNotificationController: ObservableObject {
         return processingTask
     }
 
-    func sendTest() async {
-        guard isEnabled else { return }
-        await refreshAuthorization()
-        guard isEnabled, isAuthorized else { return }
-        let content = UNMutableNotificationContent()
-        content.title = "ato? notifications are ready"
-        content.body = "You’ll be notified when an AI allowance reaches 20% and 10%."
-        if soundEnabled { content.sound = .default }
-        do {
-            try await client.add(UNNotificationRequest(identifier: "ato-usage-test", content: content, trigger: nil))
-            errorMessage = nil
-        } catch {
-            errorMessage = "Could not send the test notification. Try again."
-        }
-    }
-
     private func processPending() async {
         defer { processingTask = nil }
         while let queuedSnapshot = pendingSnapshot {
