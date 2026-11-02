@@ -15,6 +15,14 @@ struct UsageNotificationSettings: View {
                 set: { enabled in Task { await controller.setEnabled(enabled) } }
             ))
             .disabled(controller.isRequestingAuthorization)
+            if controller.isRequestingAuthorization {
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.small)
+                    Text("Allow notifications in the macOS permission dialog.")
+                }
+                .font(SettingsStyle.caption)
+                .foregroundStyle(.secondary)
+            }
             Text("Notify once at 20% and again at 10% for each allowance in your rings.")
                 .font(SettingsStyle.caption)
                 .foregroundStyle(.secondary)
@@ -33,6 +41,14 @@ struct UsageNotificationSettings: View {
                 Text("Allow notifications for ato? in System Settings → Notifications.")
                     .font(SettingsStyle.caption)
                     .foregroundStyle(.secondary)
+            }
+            if controller.authorizationStatus == .denied {
+                Button("Open Notification Settings…") {
+                    if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension") {
+                        NSWorkspace.shared.open(url)
+                    }
+                }
+                .font(SettingsStyle.caption)
             }
             if controller.isEnabled && !monitoringEnabled {
                 Text("Enable usage monitoring to receive alerts.")

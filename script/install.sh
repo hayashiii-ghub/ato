@@ -46,15 +46,6 @@ python3 "${GEMINI_SETUP[@]}" --check
 pkill -x UsageRings >/dev/null 2>&1 || true
 rm -rf "$DESTINATION"
 mv "$STAGED_APP" "$DESTINATION"
-# WidgetKit can keep the previous executable alive after the app is replaced.
-# Stop only this installation's widget after replacement, so its next launch uses
-# the new bundle and its timeline passes WidgetKit's bundle-version validation.
-WIDGET_EXECUTABLE="$DESTINATION/Contents/PlugIns/UsageRingsWidget.appex/Contents/MacOS/UsageRingsWidget"
-while IFS= read -r widget_pid; do
-  if [[ "$(ps -p "$widget_pid" -o comm=)" == "$WIDGET_EXECUTABLE" ]]; then
-    kill -TERM "$widget_pid" 2>/dev/null || true
-  fi
-done < <(pgrep -x UsageRingsWidget || true)
 CLAUDE_SETUP_STATUS=0
 python3 "${CLAUDE_SETUP[@]}" || CLAUDE_SETUP_STATUS=$?
 GEMINI_SETUP_STATUS=0
