@@ -91,7 +91,7 @@ class InstallTests(unittest.TestCase):
         self.assertTrue(self.opened.exists())
         self.assertEqual(self.opened.read_text().splitlines(),
                          [str(self.destination), "--args", "-SUEnableAutomaticChecks", "NO"])
-        self.assertTrue(self.widgets_checked.exists())
+        self.assertFalse(self.widgets_checked.exists())
 
     def test_failed_copy_preserves_existing_app(self):
         self.write_command(self.commands / "ditto", 'mkdir -p "$2"\ncp -R "$1/." "$2/"\nexit 23')

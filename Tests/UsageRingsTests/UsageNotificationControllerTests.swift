@@ -14,7 +14,6 @@ struct UsageNotificationControllerTests {
         let controller = fixture.controller(now: instant)
         await controller.refreshAuthorization()
         await controller.update(snapshot(remaining: 8))?.value
-        await controller.sendTest()
         #expect(!controller.isEnabled && !controller.soundEnabled)
         #expect(fixture.client.permissionRequests == 0)
         #expect(fixture.client.requests.isEmpty)
@@ -67,23 +66,19 @@ struct UsageNotificationControllerTests {
         #expect(fixture.client.requests.count == 2)
     }
 
-    @Test func soundIsOptionalAndTestDeliveryDoesNotConsumeAUsageStage() async throws {
+    @Test func soundPreferenceIsSavedAndDisabledAlertsStayQuiet() async throws {
         let fixture = try Fixture()
         defer { fixture.cleanUp() }
         fixture.client.status = .authorized
         let controller = fixture.controller(now: instant)
         await controller.setEnabled(true)
         controller.setSoundEnabled(true)
-        await controller.sendTest()
-        #expect(fixture.client.requests.count == 1)
-        #expect(fixture.client.requests[0].identifier == "ato-usage-test")
-        #expect(fixture.client.requests[0].content.sound != nil)
         await controller.update(snapshot(remaining: 8))?.value
-        #expect(fixture.client.requests.count == 2)
-        #expect(fixture.client.requests[1].content.sound != nil)
+        #expect(fixture.client.requests.count == 1)
+        #expect(fixture.client.requests[0].content.sound != nil)
         await controller.setEnabled(false)
         await controller.update(snapshot(remaining: 4, observedAt: instant.addingTimeInterval(1)))?.value
-        #expect(fixture.client.requests.count == 2)
+        #expect(fixture.client.requests.count == 1)
         #expect(fixture.client.pendingRemovals == 1)
         #expect(!fixture.controller(now: instant).isEnabled)
         #expect(fixture.controller(now: instant).soundEnabled)

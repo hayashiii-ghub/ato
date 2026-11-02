@@ -19,12 +19,14 @@ final class UsageRingsApplication: NSObject, NSApplicationDelegate {
         self?.notifications.update(snapshot)
     })
     private let updateController = AppUpdateController()
+    private let widgetRecovery = UsageWidgetRecovery()
     private lazy var window: UsageWindowController = UsageWindowController(store: store, updateController: updateController, notifications: notifications)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         updateController.start()
         store.startIfEnabled()
         window.show()
+        Task { await widgetRecovery.recoverIfNeeded() }
     }
 
     func application(_ application: NSApplication, open urls: [URL]) {
