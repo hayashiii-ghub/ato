@@ -14,9 +14,12 @@ struct UsageRingsMain {
 
 @MainActor
 final class UsageRingsApplication: NSObject, NSApplicationDelegate {
-    private let store = UsageStore()
+    private lazy var notifications: UsageNotificationController = UsageNotificationController(onOpen: { [weak self] in self?.window.show() })
+    private lazy var store: UsageStore = UsageStore(onSnapshot: { [weak self] snapshot in
+        self?.notifications.update(snapshot)
+    })
     private let updateController = AppUpdateController()
-    private lazy var window = UsageWindowController(store: store, updateController: updateController)
+    private lazy var window: UsageWindowController = UsageWindowController(store: store, updateController: updateController, notifications: notifications)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         updateController.start()

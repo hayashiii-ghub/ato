@@ -162,7 +162,7 @@ class UsageBudgetHookTests(unittest.TestCase):
         self.assertEqual(self.recorded_calls(), [["status", "--json", "--provider", provider] for provider in PROVIDERS.values()])
 
     def test_stages_use_strict_thresholds_and_an_initial_low_reading_emits_only_one_stage(self):
-        for remaining, stage in [(20, None), (19.9, 20), (10, 20), (9.9, 10), (5, 10), (4, 5), (0, 5)]:
+        for remaining, stage in [(20, None), (19.9, 20), (10, 20), (9.9, 10), (5, 10), (4, 10), (0, 10)]:
             with self.subTest(remaining=remaining):
                 output = self.run_hook(report=self.report(remaining=remaining),
                                        event=self.event("codex", "boundary-" + str(remaining)))
@@ -170,10 +170,9 @@ class UsageBudgetHookTests(unittest.TestCase):
                     self.assert_quiet(output)
                 else:
                     notice = self.notice("codex", output)
-                    self.assertIn(f"{stage}%", notice)
+                    self.assertIn(f"below {stage}%", notice)
                     for other in {5, 10, 20} - {stage}:
-                        if other != remaining:
-                            self.assertNotIn(f"{other}%", notice)
+                        self.assertNotIn(f"below {other}%", notice)
 
     def test_a_fresh_main_alert_still_emits_when_another_window_is_unknown(self):
         report = self.report()
@@ -197,7 +196,7 @@ class UsageBudgetHookTests(unittest.TestCase):
 
     def test_the_same_conversation_and_provider_are_throttled_before_another_cli_call(self):
         event = self.event("codex")
-        self.notice("codex", self.run_hook(report=self.report(remaining=8), event=event))
+        self.notice("codex", self.run_hook(report=self.report(remaining=19), event=event))
         self.assert_quiet(self.run_hook(report=self.report(remaining=4), event=event))
         self.assertEqual(self.recorded_calls(), [["status", "--json", "--provider", "codex"]])
 
@@ -263,7 +262,7 @@ class UsageBudgetHookTests(unittest.TestCase):
     def test_the_same_reset_notices_each_lower_stage_once_and_does_not_repeat_after_recovery(self):
         baseline = self.report(remaining=19, observed_age=30)
         readings = [(19, 20), (14, None), (9, 10), (15, None), (9, None),
-                    (4, 5), (8, None), (4, None), (0, None)]
+                    (4, None), (8, None), (4, None), (0, None)]
         for index, (remaining, stage) in enumerate(readings):
             with self.subTest(remaining=remaining, index=index):
                 if index:
@@ -288,6 +287,37 @@ class UsageBudgetHookTests(unittest.TestCase):
         self.assertIn("below 10%", self.notice("codex", self.run_hook(report=changed)))
         self.assertEqual(len(self.recorded_calls()), 2)
 
+    def test_legacy_five_percent_state_suppresses_duplicates_until_a_new_reset(self):
+        for history in ("single-stage", "reset-history"):
+            with self.subTest(history=history):
+                report = self.report(remaining=4, observed_age=30)
+                reset = datetime.fromisoformat(report["alerts"][0]["resetsAt"].replace("Z", "+00:00")).timestamp()
+                observed = datetime.fromisoformat(report["alerts"][0]["observedAt"].replace("Z", "+00:00")).timestamp() - 1
+                window = {"observed": observed}
+                if history == "single-stage":
+                    window.update({"reset": reset, "stage": 5})
+                else:
+                    window["notices"] = {str(reset): 5}
+                key = hashlib.sha256(b"codex\0fixture-session").hexdigest()
+                state = {"version": 1, "sessions": {key: {
+                    "checkedAt": time.time() - 61, "observed": observed, "windows": {"secondary": window},
+                }}}
+                self.state = self.root / ("state-" + history)
+                self.state.mkdir(mode=0o700)
+                path = self.state / "state.json"
+                path.write_text(json.dumps(state))
+                path.chmod(0o600)
+
+                self.assert_quiet(self.run_hook(report=report))
+                self.allow_next_poll()
+                changed = self.advance_observation(report, 1)
+                new_reset = self.timestamp(datetime.now(timezone.utc) + timedelta(days=2))
+                changed["services"][0]["windows"][0]["resetsAt"] = new_reset
+                changed["alerts"][0]["resetsAt"] = new_reset
+                self.assertIn("below 10%", self.notice("codex", self.run_hook(report=changed)))
+                self.allow_next_poll()
+                self.assert_quiet(self.run_hook(report=self.advance_observation(report, 2)))
+
     def test_missing_alerts_or_cli_failure_do_not_erase_a_noticed_stage(self):
         report = self.report(remaining=8)
         self.notice("codex", self.run_hook(report=report))
@@ -304,7 +334,7 @@ class UsageBudgetHookTests(unittest.TestCase):
         self.assertEqual(len(self.recorded_calls()), 4)
 
     def test_an_older_observation_cannot_notice_a_lower_stage(self):
-        report = self.report(remaining=8)
+        report = self.report(remaining=19)
         self.notice("codex", self.run_hook(report=report))
         self.allow_next_poll()
         older = self.at_remaining(report, 4)

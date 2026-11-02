@@ -133,7 +133,7 @@ def fresh_alerts(report, provider, now):
         if (window.get("resetsAt") != reset_raw or expiry is None or expiry <= now
                 or (reset_raw is not None and (reset is None or reset <= now))):
             continue
-        stage = next(level for level in (5, 10, 20) if remaining < level)
+        stage = next(level for level in (10, 20) if remaining < level)
         valid[window_id] = {"id": window_id, "remaining": remaining, "observed": observed,
                             "reset": reset, "stage": stage, "period": window.get("period")}
     return [valid[key] for key in sorted(valid)[:MAX_WINDOWS]]

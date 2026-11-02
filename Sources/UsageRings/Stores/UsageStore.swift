@@ -22,6 +22,7 @@ final class UsageStore: ObservableObject {
     private let fetch: @Sendable (UsageService) async -> ServiceUsage
     private let authorizeCursor: @Sendable () async -> Void
     private let onPublish: @MainActor () -> Void
+    private let onSnapshot: @MainActor (UsageSnapshot) -> Void
     private var pollingTask: Task<Void, Never>?
     private var wakeObserver: NSObjectProtocol?
     private var generation = 0
@@ -36,11 +37,13 @@ final class UsageStore: ObservableObject {
          },
          onPublish: @escaping @MainActor () -> Void = {
              WidgetCenter.shared.reloadTimelines(ofKind: UsageSnapshot.widgetKind)
-         }) {
+         },
+         onSnapshot: @escaping @MainActor (UsageSnapshot) -> Void = { _ in }) {
         self.defaults = defaults
         self.fetch = fetch
         self.authorizeCursor = authorizeCursor
         self.onPublish = onPublish
+        self.onSnapshot = onSnapshot
         // The pre-consent preference is preserved, but cannot authorize this connection method.
         let hasConsent = defaults.integer(forKey: Self.consentKey) == Self.consentVersion
         let resumesMonitoring = hasConsent && defaults.bool(forKey: Self.preferenceKey)
@@ -202,6 +205,7 @@ final class UsageStore: ObservableObject {
     }
 
     private func publish() {
+        onSnapshot(snapshot)
         onPublish()
     }
 }
