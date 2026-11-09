@@ -2,7 +2,7 @@
   "name": "usage-rings-site",
   "private": true,
   "type": "module",
-  "packageManager": "bun@1.4.2",
+  "packageManager": "bun@1.4.4",
   "scripts": {
     "dev": "bun --hot scripts/dev.ts",
     "preview": "bun scripts/dev.ts --preview",
@@ -22,6 +22,6 @@
     "wrangler": "4.158.0"
   },
   "engines": {
-    "bun": "1.4.2"
+    "bun": "1.4.4"
   }
 }
