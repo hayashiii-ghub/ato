@@ -45,8 +45,8 @@ struct IconAssets {
                 ["appearance": "dark", "value": ["solid": "extended-srgb:0.04314,0.04314,0.05098,1.00000"]]
             ],
             "groups": [
-                nativeGroup("ring", shadow: 0, translucency: 0.66),
-                nativeGroup("mark", shadow: 0, translucency: 0.66)
+                nativeGroup("ring"),
+                nativeGroup("mark")
             ],
             "supported-platforms": ["squares": ["macOS"]]
         ]
@@ -74,11 +74,11 @@ struct IconAssets {
         }
     }
 
-    private static func nativeGroup(_ name: String, shadow: Double, translucency: Double) -> [String: Any] {
+    private static func nativeGroup(_ name: String) -> [String: Any] {
         [
             "blend-mode": "normal",
-            "shadow": ["kind": "neutral", "opacity": shadow],
-            "translucency": ["enabled": true, "value": translucency],
+            "shadow": ["kind": "neutral", "opacity": 0],
+            "translucency": ["enabled": false, "value": 0],
             // A native fill override fills stroke interiors; retain SVG paints in appearance-specific layers.
             "layers": [[
                 "image-name-specializations": [
