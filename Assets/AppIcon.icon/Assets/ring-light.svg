@@ -1,0 +1,7 @@
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="114 96 1024 1024" fill="none" width="1024" height="1024">
+    <g transform="translate(626.0 608.0) scale(0.84) translate(-626.0 -608.0)">
+        <circle id="track" cx="626" cy="608" r="443.5" stroke-width="93" stroke="rgb(0.000000000,0.000000000,0.000000000)" stroke-opacity="0.110117644"></circle>
+        <circle id="ring" cx="626" cy="608" r="443.5" stroke-width="93" stroke-linecap="round" stroke-dasharray="2293.366 493.227" transform="rotate(-91.5 626 608)" stroke="rgb(51.999985501,199.000003338,88.999994695)" stroke-opacity="1.000000000"></circle>
+    </g>
+</svg>
