@@ -18,7 +18,7 @@ enum UsageDisplayText {
             switch usage.service {
             case .codex: return "Sign in to the Codex CLI with ChatGPT, then refresh."
             case .cursor: return "Open Cursor and sign in, then refresh."
-            case .claude: return "Use Claude Code, then refresh to receive usage."
+            case .claude: return "Use Claude Code in a terminal with the status-line helper, then refresh to receive usage."
             case .grokBot: return "Sign in to Cursor with your Grok account, then refresh."
             case .gemini: return "Use Antigravity with the status-line helper to receive usage."
             }
@@ -33,13 +33,13 @@ enum UsageDisplayText {
             let windows = usage.preferredPeriod == nil ? usage.windows : [usage.headline].compactMap { $0 }
             if usage.hasFreshReading(at: date), windows.contains(where: { $0.resetsAt.map { $0 <= date } ?? false }) {
                 switch usage.service {
-                case .claude: return "A usage window has reset. Use Claude Code, then refresh."
+                case .claude: return "A usage window has reset. Use Claude Code in a terminal, then refresh."
                 case .gemini: return "A usage window has reset. Use Antigravity to receive a new quota reading."
                 default: return "A usage window has reset. Refresh to receive a new reading."
                 }
             }
             switch usage.service {
-            case .claude: return "Use Claude Code to update your usage."
+            case .claude: return "Use Claude Code in a terminal, then refresh to update your usage."
             case .gemini: return "Waiting for a new quota reading from Antigravity. Refresh only rereads its cache."
             default: return "Waiting for a fresh reading."
             }

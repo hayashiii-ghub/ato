@@ -2,7 +2,7 @@ import Darwin
 import Foundation
 
 public struct ClaudeStatuslineCache: Codable, Equatable, Sendable {
-    public var usage: ServiceUsage
+    public var usage: ServiceUsage?
     public var responseMarkers: [String]
     public var sessionProgress: [String: SessionProgress]?
     public let version: Int
@@ -23,20 +23,25 @@ public enum ClaudeStatuslineFile {
         guard let size = try? location.resourceValues(forKeys: [.fileSizeKey]).fileSize,
               size <= 65_536, let data = try? Data(contentsOf: location),
               let cache = try? JSONDecoder().decode(ClaudeStatuslineCache.self, from: data),
-              cache.version == 1, cache.usage.service == .claude, cache.usage.state == .ready,
-              cache.usage.updatedAt?.timeIntervalSinceReferenceDate.isFinite == true,
-              !cache.usage.windows.isEmpty, cache.usage.windows.count <= 2,
-              Set(cache.usage.windows.map(\.id)).count == cache.usage.windows.count,
-              cache.usage.windows.allSatisfy({
-                  ["five_hour", "seven_day"].contains($0.id) && $0.usedPercent.isFinite &&
-                  (0...100).contains($0.usedPercent) && $0.resetsAt?.timeIntervalSinceReferenceDate.isFinite == true
-              }), cache.responseMarkers.count <= 256,
+              cache.version == 1, cache.responseMarkers.count <= 256,
               (cache.sessionProgress?.count ?? 0) <= 256,
               cache.sessionProgress?.allSatisfy({ entry in
                   entry.key.utf8.count == 64 && entry.key.utf8.allSatisfy { (48...57).contains($0) || (97...102).contains($0) }
-                      && entry.value.apiDurationMilliseconds.isFinite && entry.value.apiDurationMilliseconds > 0
+                      && entry.value.apiDurationMilliseconds.isFinite && entry.value.apiDurationMilliseconds >= 0
                       && entry.value.expiresAt.timeIntervalSinceReferenceDate.isFinite
               }) ?? true else { return nil }
+        if let usage = cache.usage {
+            guard usage.service == .claude, usage.state == .ready,
+                  usage.updatedAt?.timeIntervalSinceReferenceDate.isFinite == true,
+                  !usage.windows.isEmpty, usage.windows.count <= 2,
+                  Set(usage.windows.map(\.id)).count == usage.windows.count,
+                  usage.windows.allSatisfy({
+                      ["five_hour", "seven_day"].contains($0.id) && $0.usedPercent.isFinite &&
+                      (0...100).contains($0.usedPercent) && $0.resetsAt?.timeIntervalSinceReferenceDate.isFinite == true
+                  }) else { return nil }
+        } else if cache.sessionProgress?.isEmpty != false {
+            return nil
+        }
         return cache
     }
 
@@ -51,8 +56,9 @@ public enum ClaudeStatuslineFile {
         guard flock(descriptor, LOCK_EX) == 0 else { throw UsageReadError.requestFailed }
         defer { flock(descriptor, LOCK_UN) }
         let previous = read(from: location)
-        guard let observedAt = input.usage.updatedAt,
-              let reset = input.usage.windows.compactMap(\.resetsAt).max() else { throw UsageReadError.invalidResponse }
+        let observedAt = input.observedAt
+        guard observedAt.timeIntervalSinceReferenceDate.isFinite else { throw UsageReadError.invalidResponse }
+        let reset = input.usage?.windows.compactMap(\.resetsAt).max() ?? observedAt.addingTimeInterval(24 * 60 * 60)
         var progress = (previous?.sessionProgress ?? [:]).filter { $0.value.expiresAt > observedAt }
         let previousProgress = progress[input.sessionMarker]
         if previousProgress == nil, progress.count == 256, let previous { return previous }
@@ -62,13 +68,13 @@ public enum ClaudeStatuslineFile {
         )
         var markers = previous?.responseMarkers ?? []
         let wasSeen = markers.contains(input.responseMarker)
-        if !wasSeen { markers = Array((markers + [input.responseMarker]).suffix(256)) }
-        var usage = input.usage
+        if input.usage != nil, !wasSeen { markers = Array((markers + [input.responseMarker]).suffix(256)) }
+        var usage = input.usage ?? previous?.usage
         let advanced = previousProgress.map { input.apiDurationMilliseconds > $0.apiDurationMilliseconds } ?? false
         // An unseen session may be an idle v1 session; establish progress before renewing freshness.
-        if let previous, wasSeen || !advanced { usage = previous.usage }
+        if let previousUsage = previous?.usage, wasSeen || !advanced { usage = previousUsage }
         // Concurrent status-line processes can acquire the lock out of reading order.
-        if let previous, let updatedAt = usage.updatedAt, let previousUpdatedAt = previous.usage.updatedAt,
+        if let previous, let updatedAt = usage?.updatedAt, let previousUpdatedAt = previous.usage?.updatedAt,
            updatedAt < previousUpdatedAt {
             usage = previous.usage
         }

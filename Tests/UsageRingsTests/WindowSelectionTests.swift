@@ -95,7 +95,7 @@ struct WindowSelectionTests {
             "usage": legacyUsage, "responseMarkers": ["synthetic-marker"], "version": 1
         ])
         try data.write(to: location)
-        var usage = try #require(ClaudeStatuslineFile.read(from: location)).usage
+        var usage = try #require(ClaudeStatuslineFile.read(from: location)?.usage)
         #expect(usage.preferredPeriod == nil)
         #expect(usage.windows.allSatisfy { $0.period == nil })
         #expect(usage.remainingPercent(at: now) == 20)
@@ -150,7 +150,7 @@ struct WindowSelectionTests {
                 "seven_day": ["used_percentage": 80, "resets_at": now.timeIntervalSince1970 + 3600]
             ]
         ])
-        #expect(try ClaudeStatusline.parse(claude, now: now)?.usage.windows.map(\.period) == [.fiveHours, .week])
+        #expect(try ClaudeStatusline.parse(claude, now: now)?.usage?.windows.map(\.period) == [.fiveHours, .week])
         let gemini = Data(#"""
         {"product":"antigravity","quota":{"gemini-5h":{"remaining_fraction":0.9,"reset_time":"2027-02-01T12:00:00Z"},"gemini-weekly":{"remaining_fraction":0.3,"reset_time":"2027-02-01T12:00:00Z"}}}
         """#.utf8)

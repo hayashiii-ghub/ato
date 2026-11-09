@@ -30,25 +30,24 @@ struct IconAssets {
         let faviconSVG = try faviconData(darkSVG)
         let faviconPNG = try png(faviconSVG, size: 32)
         var outputs: [(String, Data)] = [
-            ("Assets/AppIcon.icon/Assets/light.svg", try svgData(svg, shapes: shapes, ids: ids, palette: light,
-                                                              scale: macArtworkScale)),
-            ("Assets/AppIcon.icon/Assets/dark.svg", try svgData(svg, shapes: shapes, ids: ids, palette: dark,
-                                                             scale: macArtworkScale))
+            ("Assets/AppIcon.icon/Assets/ring-light.svg", try svgData(svg, shapes: shapes, ids: ["track", "ring"],
+                                                                   palette: light, scale: macArtworkScale)),
+            ("Assets/AppIcon.icon/Assets/ring-dark.svg", try svgData(svg, shapes: shapes, ids: ["track", "ring"],
+                                                                  palette: dark, scale: macArtworkScale)),
+            ("Assets/AppIcon.icon/Assets/mark-light.svg", try svgData(svg, shapes: shapes, ids: ["question", "dot"],
+                                                                   palette: light, scale: macArtworkScale)),
+            ("Assets/AppIcon.icon/Assets/mark-dark.svg", try svgData(svg, shapes: shapes, ids: ["question", "dot"],
+                                                                  palette: dark, scale: macArtworkScale))
         ]
         let icon: [String: Any] = [
-            "fill": ["solid": "extended-srgb:0,0,0,0"],
-            "groups": [[
-                "blend-mode": "normal", "lighting": "individual",
-                "shadow": ["kind": "neutral", "opacity": 0],
-                "translucency": ["enabled": false, "value": 0],
-                // A native fill override fills stroke interiors; retain SVG paints in one appearance-specific image.
-                "layers": [[
-                    "image-name-specializations": [
-                        ["value": "light.svg"],
-                        ["appearance": "dark", "value": "dark.svg"]
-                    ], "name": "ato", "glass": false, "hidden": false, "opacity": 1
-                ]]
-            ]],
+            "fill-specializations": [
+                ["value": ["solid": "extended-srgb:0.94902,0.95294,0.94510,1.00000"]],
+                ["appearance": "dark", "value": ["solid": "extended-srgb:0.04314,0.04314,0.05098,1.00000"]]
+            ],
+            "groups": [
+                nativeGroup("ring", shadow: 0, translucency: 0.66),
+                nativeGroup("mark", shadow: 0, translucency: 0.66)
+            ],
             "supported-platforms": ["squares": ["macOS"]]
         ]
         var metadata = try JSONSerialization.data(withJSONObject: icon, options: [.prettyPrinted, .sortedKeys])
@@ -73,6 +72,21 @@ struct IconAssets {
             try data.write(to: destination, options: .atomic)
             print(path)
         }
+    }
+
+    private static func nativeGroup(_ name: String, shadow: Double, translucency: Double) -> [String: Any] {
+        [
+            "blend-mode": "normal",
+            "shadow": ["kind": "neutral", "opacity": shadow],
+            "translucency": ["enabled": true, "value": translucency],
+            // A native fill override fills stroke interiors; retain SVG paints in appearance-specific layers.
+            "layers": [[
+                "image-name-specializations": [
+                    ["value": "\(name)-light.svg"],
+                    ["appearance": "dark", "value": "\(name)-dark.svg"]
+                ], "name": name, "glass": true, "hidden": false, "opacity": 1
+            ]]
+        ]
     }
 
     private struct RGBA {
