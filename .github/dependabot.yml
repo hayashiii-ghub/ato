@@ -8,6 +8,8 @@ updates:
       time: "09:00"
       timezone: "Asia/Tokyo"
     open-pull-requests-limit: 3
+    cooldown:
+      default-days: 3
     groups:
       minor-and-patch:
         applies-to: version-updates
@@ -25,10 +27,22 @@ updates:
       time: "09:00"
       timezone: "Asia/Tokyo"
     open-pull-requests-limit: 3
+    cooldown:
+      default-days: 3
     groups:
-      minor-and-patch:
+      # Bunはdependency-typeの公式対応外のため、devDependencies追加時はこの一覧も更新する。
+      development:
         applies-to: version-updates
-        patterns: ["*"]
+        patterns:
+          - "@types/bun"
+          - "cf"
+          - "typescript"
+          - "wrangler"
+        update-types: ["minor", "patch"]
+      production:
+        applies-to: version-updates
+        patterns:
+          - "*"
         update-types: ["minor", "patch"]
 
   - package-ecosystem: "github-actions"
@@ -39,6 +53,8 @@ updates:
       time: "09:00"
       timezone: "Asia/Tokyo"
     open-pull-requests-limit: 3
+    cooldown:
+      default-days: 3
     groups:
       minor-and-patch:
         applies-to: version-updates
