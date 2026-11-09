@@ -1,3 +1,5 @@
 dist/
 node_modules/
 .sites-runtime/
+.cloudflare/
+.wrangler/

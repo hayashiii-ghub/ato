@@ -21,6 +21,8 @@
   "include": [
     "src/**/*.ts",
     "scripts/**/*.ts",
-    "tests/**/*.ts"
+    "tests/**/*.ts",
+    "cloudflare.config.ts",
+    "wrangler.config.ts"
   ]
 }

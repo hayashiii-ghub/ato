@@ -8,11 +8,18 @@
     "preview": "bun scripts/dev.ts --preview",
     "check": "tsc --noEmit",
     "build": "bun scripts/build.ts",
-    "test": "bun run build && bun test"
+    "test": "bun run build && bun test",
+    "cf:build": "bun run build && node node_modules/cf/bin/cf build",
+    "cf:check": "bun run cf:build && node node_modules/cf/bin/cf deploy --prebuilt --worker ato-site-preview --dry-run",
+    "cf:build:production": "bun run build && node node_modules/cf/bin/cf build --mode production",
+    "cf:check:production": "bun run cf:build:production && node node_modules/cf/bin/cf deploy --prebuilt --mode production --worker ato-site --dry-run",
+    "cf:dev": "bun run build && node node_modules/cf/bin/cf dev"
   },
   "devDependencies": {
     "@types/bun": "1.4.4",
-    "typescript": "7.0.2"
+    "cf": "1.0.0-beta.28",
+    "typescript": "7.0.2",
+    "wrangler": "4.158.0"
   },
   "engines": {
     "bun": "1.4.2"

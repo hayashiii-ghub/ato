@@ -26,6 +26,8 @@ APP_VERSION="$app_version" APP_BUILD="$app_build" make build
 
 Website: use Bun 1.4.2; run `cd site && bun install --frozen-lockfile`, then root `make site-check` and `make site-build`, then `cd site && bun run test`. `bun run dev` previews the site. Browser changes require desktop/mobile, language-switch, and demo-control checks.
 
+For CF site work use the README's `ato-cf-preview-dev` container (Node 24.22.1 / Bun 1.4.2). Run dependencies/checks/builds there; keep authentication on the Mac. `cf:check` targets `ato-site-preview`; `cf:check:production` targets `ato-site`. Both only build/dry-run. Before prebuilt commands inspect the recorded Build Output mode and Worker name; pass the matching mode and explicit `--worker` selector. cf beta.28 trusts the output's mode when `--mode` is omitted, so omission does not select preview. Type-check both config files and keep the account independent of mode. Mode preparation must not add routes/domains or upload/deploy; DNS cutover and Vercel changes require their own authorized step. Mac commands use `fnm exec --using=24.22.1 cf`. Preserve app packaging and update feeds.
+
 `swift run WidgetPreview dist/widget-preview.png` renders synthetic fixtures, not WidgetKit scheduling/compositing. Launch configured test apps with `-SUEnableAutomaticChecks NO` without changing saved preferences. After editing `Assets/AppIcon.svg`, run `swift run IconAssets` to regenerate native/web icons.
 
 ## Release
