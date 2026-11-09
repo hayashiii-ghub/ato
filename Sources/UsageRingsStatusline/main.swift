@@ -23,7 +23,8 @@ do {
         print(text.isEmpty ? provider : text)
     } else if let input = try ClaudeStatusline.parse(data) {
         try ClaudeStatuslineFile.write(input)
-        print(input.usage.windows.map { "\($0.title): \(Int($0.remainingPercent.rounded()))% left" }.joined(separator: " · "))
+        let text = input.usage?.windows.map { "\($0.title): \(Int($0.remainingPercent.rounded()))% left" }.joined(separator: " · ")
+        print(text ?? provider)
     } else {
         print(provider)
     }

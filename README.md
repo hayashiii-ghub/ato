@@ -43,6 +43,12 @@ Merge into `~/.claude/settings.json` (or `$CLAUDE_CONFIG_DIR/settings.json`), pr
 {"statusLine":{"type":"command","command":"\"/Applications/Usage Rings.app/Contents/Helpers/UsageRingsStatusline\""}}
 ```
 
+Use Claude Code in a terminal with this helper connected. After a response, refresh ato? to read its
+updated usage. Refresh only rereads saved usage; it does not request a new reading from Claude.
+
+Sessions in the Claude desktop app's Code tab have been [reported not to run the status-line helper](https://github.com/hayashiii-ghub/ato/issues/29).
+Use a terminal session to update ato?.
+
 ### Gemini helper
 
 Merge into `~/.gemini/antigravity-cli/settings.json`, preserving other settings and custom status lines:
