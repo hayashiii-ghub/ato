@@ -103,9 +103,9 @@ older replays can appear new. A reset never implies a full allowance.
 See [AGENTS.md](AGENTS.md#development) for build, installation, website, and release commands.
 [MIT](LICENSE) · [Third-party licenses](THIRD_PARTY_NOTICES.md)
 
-## Cloudflare website preview
+## Cloudflare website deployment
 
-Production remains on Vercel. The existing `site/` build targets `ato-site-preview` by default and `ato-site` with `--mode production`. The Cloudflare configuration attaches no custom domains or routes. The app and update feeds are unchanged.
+The existing `site/` build targets `ato-site-preview` by default and `ato-site` with `--mode production`. Only the production configuration declares `ato.shigoto.dev`; previews have no custom domain. Validate the actual DNS and HTTPS cutover separately from configuration and build success. The app and update feeds are unchanged.
 
 Use Node.js 24.22.1, Bun 1.4.2, and `dev-environment:0.1.1`. `site/package.json` and `bun.lock` pin cf `1.0.0-beta.28` and Wrangler `4.158.0`. cf runs on Node.
 
@@ -127,6 +127,8 @@ Preview at `http://localhost:8796`. The website builds into `site/dist/`, Cloudf
 
 Authenticate and deploy on the Mac. cf `1.0.0-beta.28` is installed globally in the Mac's existing Node.js 24.22.1 environment; the default Node.js environment is unchanged. Sign in with `fnm exec --using=24.22.1 cf auth login`, then run `fnm exec --using=24.22.1 cf deploy --prebuilt --worker ato-site-preview` from `site/` to publish a default build to the preview Worker. Do not copy credentials into the container.
 
-Build and dry-run a production candidate with `container exec -w /workspace/site ato-cf-preview-dev bunx --package bun@1.4.2 bun run cf:check:production`. After review, publish it from the Mac's `site/` directory with `fnm exec --using=24.22.1 cf deploy --prebuilt --mode production --worker ato-site --no-provision`. The candidate is live at [ato-site.hayashigoto.workers.dev](https://ato-site.hayashigoto.workers.dev/). `ato.shigoto.dev` is still served by Vercel; publishing the candidate and attaching the custom domain are separate steps.
+Build and dry-run production with `container exec -w /workspace/site ato-cf-preview-dev bunx --package bun@1.4.2 bun run cf:check:production`. After review, update it from the Mac's `site/` directory with `fnm exec --using=24.22.1 cf deploy --prebuilt --mode production --worker ato-site --no-provision`. Check both [workers.dev](https://ato-site.hayashigoto.workers.dev/) and the production URL `https://ato.shigoto.dev`. Once the zone preserves the existing DNS, is active, and HTTPS is ready, apply only domain settings to the existing Worker with `fnm exec --using=24.22.1 cf workers triggers deploy --prebuilt --mode production --worker ato-site`.
 
-Build Output is shared across modes and replaced by the last build. In cf beta.28, omitting `--mode` uses the mode recorded in that output; it does not select the preview target. Before a prebuilt command, inspect `buildContext.mode` in `.cloudflare/output/v0/config.json` and `name` in `.cloudflare/output/v0/workers/default/worker.config.json`, then pass `--mode production --worker ato-site` for production output. Rebuild with `cf:check` before publishing to the preview Worker again. DNS cutover, production deployment, and disabling Vercel are separate steps.
+Build Output is shared across modes and replaced by the last build. In cf beta.28, omitting `--mode` uses the mode recorded in that output; it does not select the preview target. Before a prebuilt command, inspect `buildContext.mode` in `.cloudflare/output/v0/config.json` and `name`/`domains` in `.cloudflare/output/v0/workers/default/worker.config.json`, then pass `--mode production --worker ato-site` for production output. Rebuild with `cf:check` before publishing to the preview Worker again.
+
+Retain the old Vercel project, deployments, and domain registration for rollback. To restore Vercel serving, detach the Cloudflare Custom Domain, restore the saved Vercel DNS records in the same Cloudflare zone, then verify HTTPS and public pages. Do not revert the whole zone or email DNS for a website rollback. Disabling or deleting Vercel is a separate step after migration checks.
