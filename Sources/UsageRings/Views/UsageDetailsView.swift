@@ -9,9 +9,9 @@ struct UsageDetailsView: View {
     @StateObject private var agentTools = AgentToolsController()
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 8) {
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 6) {
                     if let message = updateController.configurationMessage {
                         Text(message).foregroundStyle(.secondary)
                     }
@@ -56,10 +56,17 @@ struct UsageDetailsView: View {
             }
             footer
         }
-        .padding(20)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
         .font(SettingsStyle.body)
         .controlSize(.regular)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background {
+            Color.clear
+                .glassEffect(.regular, in: Rectangle())
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+        }
     }
 
     private var footer: some View {

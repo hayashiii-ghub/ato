@@ -25,7 +25,7 @@ struct EditableUsageRing: View {
         let remainingPercent = usage.remainingPercent(at: date).map { Int($0.rounded()) }
 
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 10) {
+            HStack(spacing: 6) {
                 UsageRingView(usage: usage, date: date, size: 32, compact: true)
                     .help("Drag to reorder")
                     .draggable(Self.dragPrefix + service.rawValue) {
