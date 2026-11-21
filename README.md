@@ -18,9 +18,6 @@ The former `Usage Rings.app` name and `usage-rings` command remain for compatibi
 
 Sign in separately. ato? does not start login flows. API-key billing is unsupported.
 
-The Grok Build and direct Antigravity connections below apply to builds from current source.
-The published v0.3.3 app also supports Cursor monitoring and uses the Cursor Grok allowance and an Antigravity status-line helper.
-
 | Service | Sign-in |
 | --- | --- |
 | Codex | Codex CLI 0.160.1+ with ChatGPT; desktop sign-in alone is insufficient |
@@ -28,7 +25,7 @@ The published v0.3.3 app also supports Cursor monitoring and uses the Cursor Gro
 | Grok | A Grok Build subscription signed in with `grok login` |
 | Gemini | Antigravity CLI (`agy`) with a Google account. Gemini CLI and Application Default Credentials are unsupported |
 
-Current source builds use a full circle for one allowance and split the circle for two.
+ato? uses a full circle for one allowance and split the circle for two.
 When both 5-hour and weekly allowances are present, 5h is on top and Week is on the bottom.
 If a refresh temporarily fails, the ring keeps its last known shape and hides unavailable values.
 
@@ -48,12 +45,12 @@ Use a terminal session to update ato?.
 
 ### Gemini helper
 
-Current source builds query Antigravity directly. If prompted in ato?, choose **Allow Antigravity Access…**.
+ato? queries Antigravity directly. If prompted in ato?, choose **Allow Antigravity Access…**.
 Use `agy` to renew an expired sign-in. The Gemini ring shows the standard Gemini allowance.
 Other model groups appear in its details when available. Existing status-line commands can stay in place.
 
 <details>
-<summary>Gemini status line for version 0.3.3</summary>
+<summary>Gemini status line for version 0.3.3 and earlier</summary>
 
 Merge into `~/.gemini/antigravity-cli/settings.json`, preserving other settings and status lines.
 
@@ -67,7 +64,7 @@ Use the actual app path and run `agy` to receive a reading.
 
 ## CLI and AI skill
 
-In **AI Tools**, choose **Set Up** or **Update** for Codex, Claude Code, Grok Build (current source builds), or Antigravity.
+In **AI Tools**, choose **Set Up** or **Update** for Codex, Claude Code, Grok Build, or Antigravity.
 This installs the read-only CLI, [skill](Skills/usage-rings-budget/SKILL.md), and budget hook while preserving unrelated settings and edited files.
 In Codex CLI, approve the hook through `/hooks` and start a new session. Grok Build runs the hook only in folders it trusts (`/hooks-trust`). Setup does not enable monitoring or connect status-line helpers. Existing Cursor Agent integrations can be disconnected from AI Tools.
 
@@ -84,8 +81,8 @@ When macOS asks, allow notifications in its permission dialog. If access was den
 ## Security and data FAQ
 
 **Reads:** Codex uses its CLI, which manages authentication/cache.
-Current source builds request Grok Build billing from `cli-chat-proxy.grok.com` using the CLI's saved sign-in.
-In current source builds, Gemini reads Antigravity's unexpired access token from the CLI file or the
+ato? requests Grok Build billing from `cli-chat-proxy.grok.com` using the CLI's saved sign-in.
+Gemini reads Antigravity's unexpired access token from the CLI file or the
 `gemini` / `antigravity` Keychain item. It queries Google's
 `daily-cloudcode-pa.googleapis.com` and `cloudcode-pa.googleapis.com`.
 Grok Build and Antigravity manage their sign-ins and renewal. ato? does not launch these CLIs,

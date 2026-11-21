@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#030304">
   <title>ato?</title>
   <link rel="canonical" href="https://ato.shigoto.dev">
-  <meta name="description" content="Codex、Claude、Cursor、Grok、Geminiから4つを選び、利用枠の残量をMacのデスクトップウィジェットで確認。">
+  <meta name="description" content="Codex、Claude、Grok、Geminiの利用枠の残量を、Macのデスクトップウィジェットで確認。">
   <meta property="og:title" content="ato?">
-  <meta property="og:description" content="5つのサービスから4つのリングを、Macの片隅に。利用枠の残量を、ひと目で確認。">
+  <meta property="og:description" content="Codex・Claude・Grok・Geminiの4つのリングを、Macの片隅に。利用枠の残量を、ひと目で確認。">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://ato.shigoto.dev">
   <meta property="og:image" content="https://ato.shigoto.dev/assets/ato-og.png?v=01df8258">
@@ -18,7 +18,7 @@
   <meta property="og:image:alt" content="ato?。Mac用のAI利用残量ウィジェット。リング表示はサンプルです。">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="ato?">
-  <meta name="twitter:description" content="5つのサービスから4つのリングを、Macの片隅に。利用枠の残量を、ひと目で確認。">
+  <meta name="twitter:description" content="Codex・Claude・Grok・Geminiの4つのリングを、Macの片隅に。利用枠の残量を、ひと目で確認。">
   <meta name="twitter:image" content="https://ato.shigoto.dev/assets/ato-og.png?v=01df8258">
   <meta name="twitter:image:alt" content="ato?。Mac用のAI利用残量ウィジェット。リング表示はサンプルです。">
   <link rel="icon" type="image/png" href="../public/assets/favicon-32.png" sizes="32x32">
@@ -61,16 +61,16 @@
         </div>
         <p id="preview-status" class="sr-only" aria-live="polite">サンプルの残量を表示しています。</p>
       </div>
-      <div class="provider-line" aria-label="対応ツール" data-i18n-aria="providersLabel"><span><img src="../public/assets/codex.svg" width="21" height="21" alt="">Codex</span><span><img src="../public/assets/claude.svg" width="21" height="21" alt="">Claude</span><span><img src="../public/assets/cursor.svg" width="21" height="21" alt="">Cursor</span><span><img src="../public/assets/grokBot.svg" width="21" height="21" alt="">Grok</span><span><img src="../public/assets/gemini.svg" width="22" height="22" alt="">Gemini</span></div>
+      <div class="provider-line" aria-label="対応ツール" data-i18n-aria="providersLabel"><span><img src="../public/assets/codex.svg" width="21" height="21" alt="">Codex</span><span><img src="../public/assets/claude.svg" width="21" height="21" alt="">Claude</span><span><img src="../public/assets/grokBot.svg" width="21" height="21" alt="">Grok</span><span><img src="../public/assets/gemini.svg" width="22" height="22" alt="">Gemini</span></div>
     </section>
 
     <section class="visual-story" id="how" aria-label="ato?の使い方" data-i18n-aria="howLabel">
       <section class="selection-section" aria-labelledby="choose-title">
-        <div class="story-heading"><h2 id="choose-title" data-i18n="chooseTitle">5つから4つ選ぶ</h2><p class="interaction-hint" data-i18n="chooseHint">サービスを切り替えてみる</p></div>
+        <div class="story-heading"><h2 id="choose-title" data-i18n="chooseTitle">4つのリングを並べ替え</h2><p class="interaction-hint" data-i18n="chooseHint">サービスを入れ替えてみる</p></div>
         <div class="selection-flow">
-          <div class="service-slots"><label class="service-slot"><span class="slot-index">01</span><span class="sr-only" data-i18n="slotLabel">表示するサービス</span><select data-service-slot="0" aria-label="表示するサービス 1"><option value="Codex" selected>Codex</option><option value="Claude">Claude</option><option value="Gemini">Gemini</option><option value="Grok">Grok</option><option value="Cursor">Cursor</option></select></label><label class="service-slot"><span class="slot-index">02</span><span class="sr-only" data-i18n="slotLabel">表示するサービス</span><select data-service-slot="1" aria-label="表示するサービス 2"><option value="Codex">Codex</option><option value="Claude" selected>Claude</option><option value="Gemini">Gemini</option><option value="Grok">Grok</option><option value="Cursor">Cursor</option></select></label><label class="service-slot"><span class="slot-index">03</span><span class="sr-only" data-i18n="slotLabel">表示するサービス</span><select data-service-slot="2" aria-label="表示するサービス 3"><option value="Codex">Codex</option><option value="Claude">Claude</option><option value="Gemini" selected>Gemini</option><option value="Grok">Grok</option><option value="Cursor">Cursor</option></select></label><label class="service-slot"><span class="slot-index">04</span><span class="sr-only" data-i18n="slotLabel">表示するサービス</span><select data-service-slot="3" aria-label="表示するサービス 4"><option value="Codex">Codex</option><option value="Claude">Claude</option><option value="Gemini">Gemini</option><option value="Grok" selected>Grok</option><option value="Cursor">Cursor</option></select></label></div>
+          <div class="service-slots"><label class="service-slot"><span class="slot-index">01</span><span class="sr-only" data-i18n="slotLabel">表示するサービス</span><select data-service-slot="0" aria-label="表示するサービス 1"><option value="Codex" selected>Codex</option><option value="Claude">Claude</option><option value="Gemini">Gemini</option><option value="Grok">Grok</option></select></label><label class="service-slot"><span class="slot-index">02</span><span class="sr-only" data-i18n="slotLabel">表示するサービス</span><select data-service-slot="1" aria-label="表示するサービス 2"><option value="Codex">Codex</option><option value="Claude" selected>Claude</option><option value="Gemini">Gemini</option><option value="Grok">Grok</option></select></label><label class="service-slot"><span class="slot-index">03</span><span class="sr-only" data-i18n="slotLabel">表示するサービス</span><select data-service-slot="2" aria-label="表示するサービス 3"><option value="Codex">Codex</option><option value="Claude">Claude</option><option value="Gemini" selected>Gemini</option><option value="Grok">Grok</option></select></label><label class="service-slot"><span class="slot-index">04</span><span class="sr-only" data-i18n="slotLabel">表示するサービス</span><select data-service-slot="3" aria-label="表示するサービス 4"><option value="Codex">Codex</option><option value="Claude">Claude</option><option value="Gemini">Gemini</option><option value="Grok" selected>Grok</option></select></label></div>
           <svg class="flow-arrow" viewBox="0 0 64 24" aria-hidden="true"><path d="M2 12h58m-8-8 8 8-8 8" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
-          <div class="selection-result"><div class="widget selection-widget" data-widget="selection" role="group" aria-label="選んだ4つをウィジェットに表示" data-i18n-aria="selectionLabel"></div></div>
+          <div class="selection-result"><div class="widget selection-widget" data-widget="selection" role="group" aria-label="4つのサービスをウィジェットに表示" data-i18n-aria="selectionLabel"></div></div>
         </div>
         <p class="story-caption" data-i18n="selectionNote">表示プレビュー · サンプルの数値</p>
       </section>
@@ -87,7 +87,7 @@
       <section class="tools-section" id="ai-tools" aria-labelledby="ai-tools-title">
         <h2 id="ai-tools-title" data-i18n="toolsTitle">AIにも残量を渡す</h2>
         <div class="tools-flow">
-          <figure class="setup-example"><figcaption data-i18n="toolsSetUpLabel">ato?で設定</figcaption><div class="tools-preview"><div class="tools-preview-header"><strong>AI Tools</strong></div><ul class="tools-clients"><li><span>Codex</span><span class="tools-setup">Set Up</span></li><li><span>Claude Code</span><span class="tools-setup">Set Up</span></li><li><span>Cursor Agent</span><span class="tools-setup">Set Up</span></li><li><span>Antigravity</span><span class="tools-setup">Set Up</span></li></ul></div></figure>
+          <figure class="setup-example"><figcaption data-i18n="toolsSetUpLabel">ato?で設定</figcaption><div class="tools-preview"><div class="tools-preview-header"><strong>AI Tools</strong></div><ul class="tools-clients"><li><span>Codex</span><span class="tools-setup">Set Up</span></li><li><span>Claude Code</span><span class="tools-setup">Set Up</span></li><li><span>Grok Build</span><span class="tools-setup">Set Up</span></li><li><span>Antigravity</span><span class="tools-setup">Set Up</span></li></ul></div></figure>
           <svg class="flow-arrow" viewBox="0 0 64 24" aria-hidden="true"><path d="M2 12h58m-8-8 8 8-8 8" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
           <figure class="notice-example"><figcaption data-i18n="toolsNoticeLabel">作業中のAIへ</figcaption><div class="budget-notice"><img src="../public/assets/codex.svg" width="28" height="28" alt=""><strong data-i18n="toolsNoticeValue">Codexの残り 9%</strong><span data-i18n="toolsNoticeWhen">作業の区切りで共有</span></div></figure>
         </div>
@@ -106,7 +106,7 @@
         <li><div class="install-art install-add"><div class="widget install-widget" data-widget="install" aria-hidden="true"></div><span class="add-widget-mark" aria-hidden="true">+</span></div><h3><span>03</span><span data-i18n="installWidget">ウィジェットを追加</span></h3><p data-i18n="widgetMenu">ウィジェットを編集</p></li>
       </ol>
       <div class="installation-notes"><p class="install-caution" id="first-launch"><span data-i18n="installCaution">Apple未公証。初回起動時にmacOSの確認が出る場合があります。</span> <a href="https://github.com/hayashiii-ghub/ato#install-and-use"  data-i18n="firstLaunchGuide">初回起動の手順</a></p><a href="https://github.com/hayashiii-ghub/ato#install-and-use" class="text-link" data-i18n="installGuideShort">導入・更新の手順</a></div>
-      <div class="connection-requirements" id="codex-setup"><h3 data-i18n="installPrerequisitesTitle">接続に必要なもの</h3><dl><div><dt>Codex</dt><dd data-i18n="prerequisiteCodex">ログイン済みのCodex CLI</dd></div><div><dt>Cursor / Grok</dt><dd data-i18n="prerequisiteCursor">Cursorのログイン</dd></div><div><dt>Claude / Gemini</dt><dd data-i18n="prerequisiteHelpers">ステータスラインの設定</dd></div></dl><a href="https://github.com/hayashiii-ghub/ato#accounts" class="text-link" data-i18n="accountsGuide">対応プラン・接続手順</a></div>
+      <div class="connection-requirements" id="codex-setup"><h3 data-i18n="installPrerequisitesTitle">接続に必要なもの</h3><dl><div><dt>Codex</dt><dd data-i18n="prerequisiteCodex">ログイン済みのCodex CLI</dd></div><div><dt>Grok</dt><dd data-i18n="prerequisiteGrok">grok loginでログインしたGrok Build</dd></div><div><dt>Claude</dt><dd data-i18n="prerequisiteClaude">Claude Codeのステータスライン設定</dd></div><div><dt>Gemini</dt><dd data-i18n="prerequisiteGemini">Antigravity CLI（agy）のログイン</dd></div></dl><a href="https://github.com/hayashiii-ghub/ato#accounts" class="text-link" data-i18n="accountsGuide">対応プラン・接続手順</a></div>
       <div class="privacy-note"><p data-i18n="privacyShort">開発者への利用データ送信なし。ウィジェットに渡す表示データに認証情報は含みません。</p><a href="https://github.com/hayashiii-ghub/ato#security-and-data-faq" class="text-link" data-i18n="privacyGuideShort">接続とデータの扱い</a></div>
     </section>
     <section class="section faq compact-faq" aria-labelledby="faq-title"><div class="section-narrow"><h2 id="faq-title" data-i18n="faqTitle">よくある質問</h2><div class="faq-list"><details><summary data-i18n="faqMissingQuestion">「—」になるのは？</summary><p data-i18n="faqMissingAnswer">未取得・取得失敗・期限切れ、または20分以上前の値です。Claude・Geminiは、ヘルパー設定後のCLI利用で更新されます。<a href="https://github.com/hayashiii-ghub/ato#accounts">接続を確認</a></p></details><details><summary data-i18n="faqStopQuestion">取得を止めるには？</summary><p data-i18n="faqStopAnswer">「Quit ato?」で停止。ウィンドウを閉じるだけでは続きます。ヘルパーの解除は<a href="https://github.com/hayashiii-ghub/ato#claude-helper">Claude</a>／<a href="https://github.com/hayashiii-ghub/ato#gemini-helper">Gemini</a>の手順へ。</p></details><details><summary data-i18n="faqOfficialQuestion">各サービスの公式アプリですか？</summary><p data-i18n="faqOfficialAnswer">独立した非公式アプリです。対応するアカウントや利用条件は<a href="https://github.com/hayashiii-ghub/ato#accounts">接続要件</a>をご確認ください。</p></details></div></div></section>
