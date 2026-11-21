@@ -1,17 +1,4 @@
 {
-  "fill-specializations" : [
-    {
-      "value" : {
-        "solid" : "extended-srgb:0.94902,0.95294,0.94510,1.00000"
-      }
-    },
-    {
-      "appearance" : "dark",
-      "value" : {
-        "solid" : "extended-srgb:0.04314,0.04314,0.05098,1.00000"
-      }
-    }
-  ],
   "groups" : [
     {
       "blend-mode" : "normal",
