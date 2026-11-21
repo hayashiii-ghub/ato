@@ -26,3 +26,5 @@ jobs:
         run: bun audit --audit-level=high
       - run: bun run check
       - run: bun run test
+      - name: Production Cloudflare build
+        run: bun run cf:build:production

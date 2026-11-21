@@ -30,6 +30,12 @@ updates:
     cooldown:
       default-days: 3
     groups:
+      # cf と wrangler はプレリリースを含め、このグループで一つの PR にする。development より前に置く。
+      cloudflare-toolchain:
+        applies-to: version-updates
+        patterns:
+          - "cf"
+          - "wrangler"
       # Bunはdependency-typeの公式対応外のため、devDependencies追加時はこの一覧も更新する。
       development:
         applies-to: version-updates
