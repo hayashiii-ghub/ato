@@ -1,8 +1,26 @@
 import { expect, test } from "bun:test";
 import { resolve } from "node:path";
 import { translations } from "../src/i18n";
+import { demoProviders, renderDemoRing } from "../src/widget";
 
 const output = resolve(import.meta.dir, "../dist");
+
+test("matches the app's allowance layout and unavailable state", () => {
+  expect(demoProviders.map(provider => provider.name)).toEqual(["Codex", "Claude", "Grok", "Gemini"]);
+  const [codex, , grok] = demoProviders;
+  const split = renderDemoRing(codex!, "normal", "en", true);
+  expect(split.match(/class="ring-track"/g)).toHaveLength(2);
+  expect(split).toContain("5h:</span><span class=\"ring-percent\">76%");
+  expect(split).toContain("W:</span><span class=\"ring-percent\">64%");
+  const empty = renderDemoRing(codex!, "missing", "ja", true);
+  expect(empty.match(/class="ring-track"/g)).toHaveLength(2);
+  expect(empty).toContain("取得できません");
+  expect(empty).not.toMatch(/ring-value|ring-percent|—/);
+  const exhausted = renderDemoRing(grok!, "low", "en", true);
+  expect(exhausted.match(/class="ring-track"/g)).toHaveLength(1);
+  expect(exhausted).toContain("W:</span><span class=\"ring-percent\">0%");
+  expect(exhausted).not.toMatch(/ring-value|5h:/);
+});
 
 test("provides both languages for every published translation hook", async () => {
   const html = await Bun.file(resolve(output, "index.html")).text();

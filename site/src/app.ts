@@ -1,25 +1,10 @@
 import { translations } from "./i18n";
 import type { Language, TranslationKey, TranslationStrings } from "./i18n";
+import { demoProviders, describeDemoRing, renderDemoRing } from "./widget";
+import type { DemoState } from "./widget";
 
-type Provider = { name: string; asset: string };
-type Reading = number | null;
-type DemoState = "normal" | "low" | "missing";
-
-const allProviders: readonly Provider[] = [
-  { name: "Codex", asset: "codex.svg" },
-  { name: "Claude", asset: "claude.svg" },
-  { name: "Gemini", asset: "gemini.svg" },
-  { name: "Grok", asset: "grokBot.svg" }
-];
-const providers: Provider[] = [...allProviders];
-const sampleReadings: Record<string, { normal: number; low: number }> = {
-  Codex: { normal: 82, low: 18 }, Claude: { normal: 64, low: 9 },
-  Gemini: { normal: 48, low: 26 }, Grok: { normal: 71, low: 0 }
-};
-function sample(provider: Provider, state: DemoState): Reading {
-  return state === "missing" ? null : sampleReadings[provider.name]?.[state] ?? null;
-}
-const circumference = 2 * Math.PI * 44;
+const providers = [...demoProviders];
+const demoStates = ["normal", "low", "missing"] as const;
 const languageStorageKey = "usage-rings-language";
 let currentState: DemoState = "normal";
 
@@ -48,19 +33,13 @@ function initialLanguage(): Language {
 let currentLanguage = initialLanguage();
 function strings(): TranslationStrings { return translations[currentLanguage]; }
 
-function ring(provider: Provider, value: Reading, showNumber = false): string {
-  const missing = value === null;
-  const color = missing ? "" : value <= 10 ? "#fb7774" : value <= 20 ? "#edc969" : "";
-  const reading = missing ? strings().unavailable : currentLanguage === "ja" ? "残り" + value + "%" : value + " percent remaining";
-  return `<div class="ring-unit${missing ? " is-missing" : ""}" role="img" aria-label="${provider.name}: ${reading}"${color ? ` style="--ring-color:${color}"` : ""}><div class="ring-wrap"><svg viewBox="0 0 100 100" aria-hidden="true"><circle class="ring-track" cx="50" cy="50" r="44"/><circle class="ring-value" cx="50" cy="50" r="44" style="stroke-dashoffset:${circumference * (1 - (value ?? 0) / 100)}"/></svg><img src="assets/${provider.asset}" alt="" width="60" height="60">${missing && !showNumber ? '<span class="missing-badge" aria-hidden="true">—</span>' : ""}</div>${showNumber ? `<div class="ring-number" aria-hidden="true">${missing ? "—" : value + "%"}</div>` : ""}</div>`;
-}
-
 function renderDemo(state: DemoState = currentState): void {
   currentState = state;
   document.querySelectorAll<HTMLElement>('[data-widget="small"],[data-widget="medium"]').forEach(widget => {
-    widget.innerHTML = providers.map(provider => ring(provider, sample(provider, state), widget.dataset.widget === "medium")).join("");
+    widget.innerHTML = providers.map(provider => renderDemoRing(provider, state, currentLanguage, widget.dataset.widget === "medium")).join("");
   });
-  element("#preview-status").textContent = state === "missing" ? strings().allUnavailable : strings().samplePrefix + providers.map(provider => provider.name + " " + sample(provider, state) + (currentLanguage === "ja" ? "%" : " percent")).join(currentLanguage === "ja" ? "、" : ", ") + (currentLanguage === "ja" ? "。" : ".");
+  element("#preview-status").textContent = state === "missing" ? strings().allUnavailable : strings().samplePrefix
+    + providers.map(provider => describeDemoRing(provider, state, currentLanguage)).join(currentLanguage === "ja" ? "。 " : ". ");
 }
 
 function updateControlLabels(): void {
@@ -97,13 +76,13 @@ function applyLanguage(language: string | undefined, persist = false): void {
   for (const [selector, key] of Object.entries(metadata)) element(selector).setAttribute("content", strings()[key]);
   renderDemo();
   renderSelection();
-  const first = allProviders[0];
+  const first = demoProviders[0];
   if (first) {
-    for (const [state, value] of [["normal", 82], ["low", 9], ["missing", null]] as const) {
-      element(`[data-widget="state-${state}"]`).innerHTML = ring(first, value, true);
+    for (const state of demoStates) {
+      element(`[data-widget="state-${state}"]`).innerHTML = renderDemoRing(first, state, currentLanguage, true);
     }
   }
-  element('[data-widget="install"]').innerHTML = allProviders.slice(0, 4).map(provider => ring(provider, sample(provider, "normal"))).join("");
+  element('[data-widget="install"]').innerHTML = demoProviders.map(provider => renderDemoRing(provider, "normal", currentLanguage)).join("");
   updateControlLabels();
 }
 
@@ -130,7 +109,7 @@ appearanceButton.addEventListener("click", () => {
   updateControlLabels();
 });
 function renderSelection(): void {
-  element('[data-widget="selection"]').innerHTML = providers.map(provider => ring(provider, sample(provider, "normal"), true)).join("");
+  element('[data-widget="selection"]').innerHTML = providers.map(provider => renderDemoRing(provider, "normal", currentLanguage, true)).join("");
   document.querySelectorAll<HTMLSelectElement>("[data-service-slot]").forEach((select, index) => {
     select.value = providers[index]?.name ?? "";
     select.setAttribute("aria-label", `${strings().slotLabel} ${index + 1}`);
@@ -139,7 +118,7 @@ function renderSelection(): void {
 document.querySelectorAll<HTMLSelectElement>("[data-service-slot]").forEach(select => {
   select.addEventListener("change", () => {
     const index = Number(select.dataset.serviceSlot);
-    const next = allProviders.find(provider => provider.name === select.value);
+    const next = demoProviders.find(provider => provider.name === select.value);
     const previous = providers[index];
     if (!next || !previous) return;
     const other = providers.findIndex(provider => provider.name === next.name);

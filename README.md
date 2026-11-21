@@ -10,7 +10,7 @@ Add the widget from **Edit Widgets → ato? → AI Usage**. Update through **Upd
 The app is ad-hoc signed, not notarized; use Apple's [per-app approval](https://support.apple.com/102445) only if you trust the download.
 
 Only selected services are monitored. Closing the window keeps polling; **Quit** stops it.
-Missing, failed, expired, or 20-minute-old readings show **—**. Widget refresh follows macOS scheduling.
+The widget hides values that are missing, failed, expired, or 20 minutes old. Widget refresh follows macOS scheduling.
 After an app update, ato? restarts its own widget once so an older running copy cannot block new readings.
 The former `Usage Rings.app` name and `usage-rings` command remain for compatibility.
 
@@ -25,8 +25,8 @@ Sign in separately. ato? does not start login flows. API-key billing is unsuppor
 | Grok | A Grok Build subscription signed in with `grok login` |
 | Gemini | Antigravity CLI (`agy`) with a Google account. Gemini CLI and Application Default Credentials are unsupported |
 
-ato? uses a full circle for one allowance and split the circle for two.
-When both 5-hour and weekly allowances are present, 5h is on top and Week is on the bottom.
+ato? uses a full circle for one allowance and splits it for two.
+The medium widget labels the upper 5-hour allowance **5h** and the lower weekly allowance **W** when both are present.
 If a refresh temporarily fails, the ring keeps its last known shape and hides unavailable values.
 
 ### Claude helper
