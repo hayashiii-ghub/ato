@@ -31,7 +31,7 @@ struct UsageDetailsView: View {
                                 SettingsIcon(name: "arrow.clockwise")
                             }
                             .buttonStyle(.borderless)
-                            .disabled(!store.isEnabled || store.isRefreshing || store.isAuthorizingCursor)
+                            .disabled(!store.isEnabled || store.isRefreshing || store.isAuthorizingAntigravity)
                             .accessibilityLabel("Refresh usage")
                             .help("Refresh usage")
                         }
@@ -39,8 +39,8 @@ struct UsageDetailsView: View {
                         TimelineView(.periodic(from: .now, by: 30)) { timeline in
                             RingLayoutSettings(store: store, date: timeline.date)
                         }
-                        if store.needsCursorAuthorization {
-                            cursorAccessExplanation
+                        if store.needsAntigravityAuthorization {
+                            antigravityAccessExplanation
                         }
                     }
                     Divider()
@@ -92,7 +92,7 @@ struct UsageDetailsView: View {
     private var connectionExplanation: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Usage monitoring").fontWeight(.medium)
-            Text("Only accounts in your rings are read. Codex, Cursor and Grok contact their services. Codex may update its existing sign-in and cache. Cursor and Grok use Cursor's saved sign-in; protected sign-ins need separate Keychain permission. Claude and Gemini use local status-line caches; ato? never starts Antigravity.")
+            Text("Codex uses its CLI. Claude uses its local status line. Grok Build and Antigravity use their existing sign-ins to request usage from xAI and Google. Antigravity may need separate Keychain permission.")
             Text("Usage and reset times are shared with the widget and can be read by other apps on this Mac. Nothing is sent to the ato? developer. Quit stops monitoring; status-line helpers are disconnected separately.")
             HStack {
                 Link("Privacy", destination: URL(string: "https://github.com/hayashiii-ghub/ato#security-and-data-faq")!)
@@ -104,14 +104,14 @@ struct UsageDetailsView: View {
         .fixedSize(horizontal: false, vertical: true)
     }
 
-    private var cursorAccessExplanation: some View {
+    private var antigravityAccessExplanation: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Cursor protects the sign-in used for Cursor and Grok. Allow ato? to read it through macOS Keychain. Choose Always Allow to keep access after reopening; app updates may ask again. Automatic refresh never opens a permission dialog.")
+            Text("Allow ato? to read Antigravity's saved sign-in through macOS Keychain. Choose Always Allow to keep access after reopening. Automatic refresh never opens a permission dialog.")
                 .foregroundStyle(.secondary)
-            Button(store.isAuthorizingCursor ? "Waiting for permission…" : "Allow Cursor Access…") {
-                Task { await store.authorizeCursorAccess() }
+            Button(store.isAuthorizingAntigravity ? "Waiting for permission…" : "Allow Antigravity Access…") {
+                Task { await store.authorizeAntigravityAccess() }
             }
-            .disabled(store.isRefreshing || store.isAuthorizingCursor)
+            .disabled(store.isRefreshing || store.isAuthorizingAntigravity)
         }
         .font(SettingsStyle.caption)
         .padding(.vertical, 8)

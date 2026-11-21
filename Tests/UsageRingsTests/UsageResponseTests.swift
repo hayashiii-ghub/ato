@@ -21,35 +21,8 @@ struct UsageResponseTests {
         #expect(usage.remainingPercent(at: now) == 18)
     }
 
-    @Test func cursorUsesReportedPercentageInsteadOfDollarAllowance() throws {
-        let data = Data(#"{"billingCycleEnd":"2027-02-01T12:00:00.000Z","individualUsage":{"plan":{"enabled":true,"used":2000,"limit":2000,"remaining":0,"totalPercentUsed":58.9,"autoPercentUsed":58.93,"apiPercentUsed":58.58}}}"#.utf8)
-        let usage = try UsageResponseParser.cursor(data, now: now)
-        #expect(abs((usage.headline?.remainingPercent ?? 0) - 41.1) < 0.001)
-        #expect(usage.windows.count == 3)
-        #expect(usage.headline?.resetsAt != nil)
-    }
-
-    @Test func fractionalPercentageIsNotMultipliedByOneHundred() throws {
-        let data = Data(#"{"individualUsage":{"plan":{"totalPercentUsed":0.36}}}"#.utf8)
-        let usage = try UsageResponseParser.cursor(data, now: now)
-        #expect(usage.headline?.remainingPercent == 99.64)
-    }
-
     @Test func missingPercentageDoesNotBecomeAFullRing() {
-        let data = Data(#"{"individualUsage":{"plan":{"used":0,"limit":2000}}}"#.utf8)
-        #expect(throws: (any Error).self) { try UsageResponseParser.cursor(data) }
         #expect(throws: (any Error).self) { try UsageResponseParser.codex(Data(#"{"rateLimits":{}}"#.utf8)) }
-    }
-
-    @Test func invalidNegativeUsageIsRejected() {
-        #expect(throws: (any Error).self) {
-            try UsageResponseParser.cursor(Data(#"{"individualUsage":{"plan":{"totalPercentUsed":-5}}}"#.utf8))
-        }
-    }
-
-    @Test func exhaustedAllowanceStaysZeroRatherThanWrapping() throws {
-        let usage = try UsageResponseParser.cursor(Data(#"{"individualUsage":{"plan":{"totalPercentUsed":105}}}"#.utf8), now: now)
-        #expect(usage.remainingPercent(at: now) == 0)
     }
 
     @Test func passedResetAndOldReadingAreUnknown() {
@@ -58,14 +31,14 @@ struct UsageResponseTests {
         ], updatedAt: now)
         #expect(usage.remainingPercent(at: now) == 20)
         #expect(usage.remainingPercent(at: now.addingTimeInterval(60)) == nil)
-        let noReset = ServiceUsage(service: .cursor, state: .ready, windows: [
+        let noReset = ServiceUsage(service: .grokBot, state: .ready, windows: [
             UsageWindow(id: "total", title: "This month", usedPercent: 40, resetsAt: nil)
         ], updatedAt: now)
         #expect(noReset.remainingPercent(at: now.addingTimeInterval(UsageSnapshot.maximumAge)) == nil)
     }
 
     @Test func failedRefreshNeverDisplaysOldDataAsCurrent() {
-        let usage = ServiceUsage(service: .cursor, state: .unavailable, windows: [
+        let usage = ServiceUsage(service: .grokBot, state: .unavailable, windows: [
             UsageWindow(id: "total", title: "This month", usedPercent: 40, resetsAt: nil)
         ], updatedAt: now)
         #expect(usage.remainingPercent(at: now) == nil)
@@ -96,21 +69,6 @@ struct UsageResponseTests {
         #expect(UsageSnapshotFile.read(from: url) == .empty)
     }
 
-    @Test func cursorUTF16TokenIsDecodedWithoutNullCharacters() {
-        let token = "test.payload.signature"
-        #expect(UsageCredentialReader.decodeToken(token.data(using: .utf16LittleEndian)!) == token)
-        #expect(UsageCredentialReader.decodeToken(Data(token.utf8)) == token)
-    }
-
-    @Test func cursorExpiredSessionIsRejectedWithoutRefresh() throws {
-        let token = jwt(subject: "auth0|user_test", expiry: now.timeIntervalSince1970 - 1)
-        #expect(throws: (any Error).self) { try UsageCredentialReader.cursorCookie(token: token, now: now) }
-        let valid = jwt(subject: "auth0|user_test", expiry: now.timeIntervalSince1970 + 600)
-        #expect(try UsageCredentialReader.cursorCookie(token: valid, now: now) == "WorkosCursorSessionToken=user_test%3A%3A\(valid)")
-        let malformed = jwt(subject: "user_test; injected=bad", expiry: now.timeIntervalSince1970 + 600)
-        #expect(throws: (any Error).self) { try UsageCredentialReader.cursorCookie(token: malformed, now: now) }
-    }
-
     @Test func bridgeOnlyAcceptsItsReadOnlyLocalRequest() {
         let valid = "GET /v1/usage HTTP/1.1\r\nHost: 127.0.0.1:\(UsageSnapshot.bridgePort)\r\nX-Usage-Rings-Widget: 1\r\n\r\n"
         #expect(UsageSnapshotServer.accepts(Data(valid.utf8)))
@@ -122,12 +80,5 @@ struct UsageResponseTests {
             valid.replacingOccurrences(of: "X-Usage-Rings-Widget: 1", with: "X-Usage-Rings-Widget: 1\r\nOrigin: https://example.com"),
             valid.replacingOccurrences(of: "X-Usage-Rings-Widget: 1", with: "X-Usage-Rings-Widget: 1\r\nX-Usage-Rings-Widget: 1")
         ] { #expect(!UsageSnapshotServer.accepts(Data(invalid.utf8))) }
-    }
-
-    private func jwt(subject: String, expiry: Double) -> String {
-        let data = try! JSONSerialization.data(withJSONObject: ["sub": subject, "exp": expiry])
-        let payload = data.base64EncodedString().replacingOccurrences(of: "+", with: "-")
-            .replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "=", with: "")
-        return "test.\(payload).signature"
     }
 }

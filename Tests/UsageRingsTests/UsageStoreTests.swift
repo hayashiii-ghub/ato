@@ -5,11 +5,44 @@ import UsageCore
 @testable import UsageRings
 
 struct UsageStoreTests {
+    @Test @MainActor func ringLayoutFollowsTheLastSuccessfulRefreshAcrossPlanChanges() async throws {
+        let suite = "UsageStoreTests.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set(2, forKey: "usageMonitoringConsentVersion")
+        defaults.set(true, forKey: "usageMonitoringEnabled")
+        let now = Date()
+        let fiveHours = UsageWindow(id: "primary", title: "5 hours", usedPercent: 20, resetsAt: nil,
+                                    period: .fiveHours)
+        let week = UsageWindow(id: "secondary", title: "Week", usedPercent: 30, resetsAt: nil, period: .week)
+        let both = ServiceUsage(service: .codex, state: .ready, windows: [fiveHours, week], updatedAt: now)
+        let weekly = ServiceUsage(service: .codex, state: .ready, windows: [week], updatedAt: now)
+        let failure = ServiceUsage(service: .codex, state: .unavailable)
+        let usage = [both, failure, weekly, failure, both]
+        let expected: [UsageRingValues] = [
+            .split(top: .init(title: "5h", remaining: 80), bottom: .init(title: "Week", remaining: 70)),
+            .split(top: .init(title: "5h", remaining: nil), bottom: .init(title: "Week", remaining: nil)),
+            .single(.init(title: "Week", remaining: 70)),
+            .single(.init(title: "Week", remaining: nil)),
+            .split(top: .init(title: "5h", remaining: 80), bottom: .init(title: "Week", remaining: 70))
+        ]
+        let source = RefreshSequence(usage)
+        let store = UsageStore(defaults: defaults, fetch: { service in
+            guard service == .codex else { return ServiceUsage(service: service, state: .unavailable) }
+            return await source.next()
+        }, onPublish: {})
+
+        for layout in expected {
+            await store.refresh()
+            #expect(store.snapshot.usage(for: .codex).ringValues(at: now) == layout)
+        }
+    }
+
     @Test(.timeLimit(.minutes(1))) @MainActor func reenabledMonitoringStartsBeforeAnOldRefreshFinishes() async throws {
         let suite = "UsageStoreTests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
-        defaults.set(1, forKey: "usageMonitoringConsentVersion")
+        defaults.set(2, forKey: "usageMonitoringConsentVersion")
         defaults.set(true, forKey: "usageMonitoringEnabled")
         let gate = FetchGate()
         let store = UsageStore(defaults: defaults, fetch: { await gate.fetch($0) }, onPublish: {})
@@ -44,7 +77,7 @@ struct UsageStoreTests {
         let suite = "UsageStoreTests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
-        defaults.set(1, forKey: "usageMonitoringConsentVersion")
+        defaults.set(2, forKey: "usageMonitoringConsentVersion")
         defaults.set(true, forKey: "usageMonitoringEnabled")
         let gate = FetchGate()
         let store = UsageStore(defaults: defaults, fetch: { await gate.fetch($0) }, onPublish: {})
@@ -59,6 +92,16 @@ struct UsageStoreTests {
         #expect(store.snapshot.services.count == 4)
         #expect(store.snapshot.services.allSatisfy { $0.windows.first?.usedPercent == 20 })
         #expect(await gate.receivedCount == 4)
+    }
+
+    private actor RefreshSequence {
+        private var readings: ArraySlice<ServiceUsage>
+
+        init(_ readings: [ServiceUsage]) { self.readings = readings[...] }
+
+        func next() -> ServiceUsage {
+            readings.popFirst() ?? ServiceUsage(service: .codex, state: .unavailable)
+        }
     }
 
     private actor FetchGate {

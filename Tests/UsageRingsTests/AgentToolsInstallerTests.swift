@@ -48,6 +48,7 @@ struct AgentToolsInstallerTests {
         switch client {
         case .codex: configuration = ".codex/hooks.json"
         case .claude: configuration = ".claude/settings.json"
+        case .grok: configuration = ".grok/hooks/usage-rings-budget.json"
         case .cursor: configuration = ".cursor/hooks.json"
         case .antigravity: configuration = ".gemini/config/hooks.json"
         }
@@ -77,6 +78,30 @@ struct AgentToolsInstallerTests {
             let mode = try f.manager.attributesOfItem(atPath: backup.path)[.posixPermissions] as? NSNumber
             #expect(mode?.intValue == 0o600)
         }
+    }
+
+    @Test func grokOwnsAHookFileThatDisconnectDeletes() throws {
+        let f = try Fixture()
+        let installed = try f.installer.install(client: .grok)
+        #expect(installed.isInstalled)
+        let groups = try #require((f.json(".grok/hooks/usage-rings-budget.json")["hooks"] as? [String: Any])?["PostToolUse"] as? [[String: Any]])
+        #expect(groups.count == 1 && groups[0]["matcher"] as? String == ".*")
+        #expect(f.exists(".grok/skills/usage-rings-budget/SKILL.md"))
+        try f.installer.remove(client: .grok)
+        #expect(!f.exists(".grok/hooks/usage-rings-budget.json"))
+        #expect(!f.exists(".grok/skills/usage-rings-budget"))
+    }
+
+    @Test func updateAndDisconnectRemoveOnlyFoldersTheyEmptied() throws {
+        let f = try Fixture()
+        try f.installer.install(client: .claude)
+        try f.write(".claude/skills/keep/SKILL.md", "unrelated")
+        try f.manager.removeItem(at: f.app.appendingPathComponent("Contents/Resources/Skills/usage-rings-budget/scripts"))
+        #expect(try f.installer.install(client: .claude).isInstalled)
+        #expect(!f.exists(".claude/skills/usage-rings-budget/scripts"))
+        try f.installer.remove(client: .claude)
+        #expect(!f.exists(".claude/skills/usage-rings-budget"))
+        #expect(f.exists(".claude/skills/keep/SKILL.md"))
     }
 
     @Test func sharedCLIStaysUntilTheLastAssistantIsRemoved() throws {

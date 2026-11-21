@@ -26,7 +26,9 @@ struct AgentToolsView: View {
             }
             .frame(minHeight: 28)
             ForEach(AgentToolClient.allCases) { client in
-                clientRow(client)
+                if client != .cursor || controller.reports[client]?.canRemove == true {
+                    clientRow(client)
+                }
             }
             if let error = controller.errorMessage {
                 Text(error).foregroundStyle(.orange)
@@ -76,22 +78,29 @@ struct AgentToolsView: View {
                     .help(Self.codexApprovalHint)
                 }
                 Spacer(minLength: 8)
-                if report?.canRemove == true {
-                    Button("Disconnect…") { removingClient = client }
-                        .buttonSizing(.flexible)
-                        .controlSize(.large)
-                        .frame(width: 104, height: 28)
-                        .disabled(controller.isWorking)
-                }
-                if report?.isInstalled != true {
-                    Button(report?.needsUpdate == true ? "Update" : "Set Up") {
-                        Task { await controller.setUp(client) }
+                // Fixed slots keep each action in the same column across rows, even when a row lacks one.
+                Group {
+                    if report?.canRemove == true {
+                        Button("Disconnect…") { removingClient = client }
+                            .buttonSizing(.flexible)
+                            .disabled(controller.isWorking)
+                    } else {
+                        Color.clear
                     }
-                    .buttonSizing(.flexible)
-                    .controlSize(.large)
-                    .frame(width: 104, height: 28)
-                    .disabled(controller.isWorking || report == nil || report?.hasConflict == true)
                 }
+                .frame(width: 104)
+                Group {
+                    if client != .cursor && report?.isInstalled != true {
+                        Button(report?.needsUpdate == true ? "Update" : "Set Up") {
+                            Task { await controller.setUp(client) }
+                        }
+                        .buttonSizing(.flexible)
+                        .disabled(controller.isWorking || report == nil || report?.hasConflict == true)
+                    } else {
+                        Color.clear
+                    }
+                }
+                .frame(width: 80)
             }
             .frame(minHeight: 32)
             if let report, report.hasConflict {

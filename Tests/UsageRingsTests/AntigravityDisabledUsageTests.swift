@@ -37,7 +37,6 @@ struct AntigravityDisabledUsageTests {
         #expect(disabled.usage.updatedAt == disabledTime)
         #expect(disabled.usage.remainingPercent(at: disabledTime) == nil)
         #expect(AntigravityStatuslineFile.read(from: fixture.location) == disabled)
-        #expect(await AntigravityUsageClient.fetch(from: fixture.location) == disabled.usage)
 
         let replay = try save(weekly(0.8), at: now.addingTimeInterval(20), to: fixture.location)
         #expect(replay.usage == disabled.usage)

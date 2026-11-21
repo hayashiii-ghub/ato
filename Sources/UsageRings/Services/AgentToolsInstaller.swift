@@ -3,12 +3,13 @@ import Darwin
 import Foundation
 
 enum AgentToolClient: String, CaseIterable, Identifiable, Sendable {
-    case codex, claude, cursor, antigravity
+    case codex, claude, grok, cursor, antigravity
     var id: String { rawValue }
     var displayName: String {
         switch self {
         case .codex: "Codex"
         case .claude: "Claude Code"
+        case .grok: "Grok Build"
         case .cursor: "Cursor Agent"
         case .antigravity: "Antigravity"
         }
@@ -17,6 +18,8 @@ enum AgentToolClient: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .codex: ".codex/hooks.json"
         case .claude: ".claude/settings.json"
+        // A file of its own: Grok loads every ~/.grok/hooks/*.json, and Disconnect can delete it whole.
+        case .grok: ".grok/hooks/usage-rings-budget.json"
         case .cursor: ".cursor/hooks.json"
         case .antigravity: ".gemini/config/hooks.json"
         }
@@ -25,6 +28,8 @@ enum AgentToolClient: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .codex: [".agents/skills/usage-rings-budget"]
         case .claude: [".claude/skills/usage-rings-budget"]
+        // Grok deduplicates skills by name, so this copy shadows the Codex/Claude ones it also scans.
+        case .grok: [".grok/skills/usage-rings-budget"]
         case .cursor: [".cursor/skills/usage-rings-budget"]
         case .antigravity: [".gemini/antigravity-cli/skills/usage-rings-budget", ".gemini/config/skills/usage-rings-budget"]
         }
@@ -254,6 +259,20 @@ struct AgentToolsInstaller: Sendable {
             }
             result = readback.report
             transaction.finish()
+            // After commit, best effort: rmdir removes only folders this change emptied, never content.
+            for (index, directory) in inspection.skillDirectories.enumerated() {
+                let removed = Set(inspection.skillFiles[index].keys).subtracting(removing ? [] : Array(inspection.source.keys))
+                let folders = Set(removed.flatMap { file in
+                    var parts = file.split(separator: "/").dropLast().map(String.init)
+                    var result: [String] = []
+                    while !parts.isEmpty { result.append(parts.joined(separator: "/")); parts.removeLast() }
+                    return result
+                })
+                for folder in folders.sorted(by: { $0.count > $1.count }) {
+                    inspection.home.removeEmptyDirectory(directory + "/" + folder)
+                }
+                if removing { inspection.home.removeEmptyDirectory(directory) }
+            }
         } catch {
             let restored = transaction.rollback()
             if !restored { throw Failure("Setup stopped after a file changed concurrently. Review ato? setup files before retrying.") }
@@ -408,6 +427,7 @@ struct AgentToolsInstaller: Sendable {
                 else { root["hooks"] = hooks }
                 if client == .cursor && !removing && root["version"] == nil { root["version"] = 1 }
             }
+            if client == .grok && root.isEmpty { return nil }
             return try JSONSerialization.data(withJSONObject: root, options: [.prettyPrinted, .sortedKeys]) + Data([10])
         }
         private static func hasSafeDepth(_ data: Data) -> Bool {
@@ -509,6 +529,11 @@ final class AgentToolsSafeHome {
             close(file); throw Failure("Another app copy is configuring AI tools. Try again when it finishes.")
         }
         return file
+    }
+    func removeEmptyDirectory(_ path: String) {
+        guard let (directory, name) = try? parent(path), directory >= 0 else { return }
+        defer { close(directory) }
+        _ = unlinkat(directory, name, AT_REMOVEDIR)
     }
     func node(_ path: String) throws -> Node? {
         let (directory, name) = try parent(path)

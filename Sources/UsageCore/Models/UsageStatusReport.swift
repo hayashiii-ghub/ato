@@ -99,11 +99,7 @@ public struct UsageStatusReport: Encodable, Sendable {
             id = window.id
             title = window.title
             period = usage.period(for: window)
-            switch usage.service {
-            case .cursor: isMain = window.id == "total"
-            case .claude: isMain = window.id == "five_hour" || window.id == "seven_day"
-            default: isMain = true
-            }
+            isMain = usage.isMainWindow(window)
             resetsAt = UsageStatusReport.finiteDate(window.resetsAt)
             guard readingState != "unavailable", let observedAt,
                   window.usedPercent.isFinite, window.usedPercent >= 0,

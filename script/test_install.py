@@ -38,16 +38,12 @@ class InstallTests(unittest.TestCase):
         assignment = 'DESTINATION="$HOME/Applications/Usage Rings.app"'
         self.assertEqual(install.count(assignment), 1)
         install = install.replace(assignment, f"DESTINATION={shlex.quote(str(self.destination))}")
-        gemini_setup = 'GEMINI_SETUP=("$ROOT_DIR/script/antigravity-statusline-setup.py" --helper "$DESTINATION/Contents/Helpers/UsageRingsStatusline" --skip-existing)'
-        self.assertEqual(install.count(gemini_setup), 1)
-        install = install.replace(gemini_setup, gemini_setup[:-1] + f" --settings {shlex.quote(str(self.gemini_settings))})")
         launcher = '/usr/bin/open "$DESTINATION"'
         self.assertEqual(install.count(launcher), 1)
         install = install.replace(launcher, f'{shlex.quote(str(self.commands / "open"))} "$DESTINATION"')
         self.installer = scripts / "install.sh"
         self.installer.write_text(install)
         shutil.copyfile(Path(__file__).with_name("claude-statusline-setup.py"), scripts / "claude-statusline-setup.py")
-        shutil.copyfile(Path(__file__).with_name("antigravity-statusline-setup.py"), scripts / "antigravity-statusline-setup.py")
         self.write_command(scripts / "build.sh", "exit 0")
         self.write_command(self.commands / "plutil", "printf 'work.hayashigoto.UsageRings\\n'")
         self.write_command(self.commands / "pkill", f"touch {shlex.quote(str(self.stopped))}")
@@ -147,11 +143,7 @@ class InstallTests(unittest.TestCase):
         self.assert_new_app_opened()
         self.assertEqual(json.loads(self.settings.read_text())["statusLine"]["command"],
                          shlex.quote(str(self.destination / "Contents/Helpers/UsageRingsStatusline")))
-        self.assertEqual(json.loads(self.gemini_settings.read_text())["statusLine"], {
-            "type": "command",
-            "command": shlex.quote(str(self.destination / "Contents/Helpers/UsageRingsStatusline")) + " --provider gemini",
-            "stack_with_default": True,
-        })
+        self.assertFalse(self.gemini_settings.exists())
 
     def test_invalid_settings_are_rejected_before_stopping_the_app(self):
         self.settings.write_text("{")
@@ -168,20 +160,10 @@ class InstallTests(unittest.TestCase):
         self.assertIn("Claude status line could not be configured", result.stderr)
         self.assert_new_app_opened()
 
-    def test_invalid_gemini_settings_are_rejected_before_stopping_the_app(self):
+    def test_antigravity_settings_are_left_alone_even_if_invalid(self):
         self.gemini_settings.write_text("{")
         result = self.install()
-        self.assertEqual(result.returncode, 1)
-        self.assertIn("Could not read valid Antigravity settings", result.stderr)
-        self.assertEqual(self.gemini_settings.read_text(), "{")
-        self.assertEqual(self.settings.read_text(), "{}\n")
-        self.assert_existing_app_untouched()
-
-    def test_late_gemini_settings_error_still_opens_the_new_app(self):
-        self.write_command(self.commands / "pkill", f"touch {shlex.quote(str(self.stopped))}\nprintf '{{' > {shlex.quote(str(self.gemini_settings))}")
-        result = self.install()
-        self.assertEqual(result.returncode, 1)
-        self.assertIn("Antigravity status line could not be configured", result.stderr)
+        self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(self.gemini_settings.read_text(), "{")
         self.assertIn("statusLine", json.loads(self.settings.read_text()))
         self.assert_new_app_opened()
@@ -208,33 +190,6 @@ class InstallTests(unittest.TestCase):
         result = self.install()
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(self.settings.read_text(), custom)
-        self.assert_new_app_opened()
-
-    def test_gemini_settings_write_failure_still_opens_the_new_app(self):
-        setup = self.installer.with_name("antigravity-statusline-setup.py")
-        implementation = setup.with_name("gemini-setup-implementation.py")
-        setup.rename(implementation)
-        setup.write_text(
-            "import runpy\nfrom unittest.mock import patch\n"
-            "with patch('os.replace', side_effect=PermissionError):\n"
-            f"    runpy.run_path({str(implementation)!r}, run_name='__main__')\n"
-        )
-        result = self.install()
-        self.assertEqual(result.returncode, 1)
-        self.assertIn("Could not update Antigravity settings", result.stderr)
-        self.assertIn("Antigravity status line could not be configured", result.stderr)
-        self.assertEqual(self.gemini_settings.read_text(), "{}\n")
-        self.assertEqual(list(self.gemini_config.glob(".usage-rings-*")), [])
-        self.assertEqual(list(self.gemini_config.glob("settings.json.ato-backup-*")), [])
-        self.assert_new_app_opened()
-
-    def test_custom_gemini_statusline_added_after_preflight_is_preserved(self):
-        custom = '{"statusLine":{"type":"command","command":"new-custom-gemini-line","enabled":false}}'
-        self.write_command(self.commands / "pkill", f"touch {shlex.quote(str(self.stopped))}\nprintf '%s' {shlex.quote(custom)} > {shlex.quote(str(self.gemini_settings))}")
-        result = self.install()
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(self.gemini_settings.read_text(), custom)
-        self.assertEqual(list(self.gemini_config.glob("settings.json.ato-backup-*")), [])
         self.assert_new_app_opened()
 
 

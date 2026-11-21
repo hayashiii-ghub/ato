@@ -16,24 +16,21 @@ The former `Usage Rings.app` name and `usage-rings` command remain for compatibi
 
 ## Accounts
 
-Sign in separately; ato? does not start login flows. API-key billing and pooled Grok enterprise allowances are unsupported.
+Sign in separately. ato? does not start login flows. API-key billing is unsupported.
+
+The Grok Build and direct Antigravity connections below apply to builds from current source.
+The published v0.3.3 app also supports Cursor monitoring and uses the Cursor Grok allowance and an Antigravity status-line helper.
 
 | Service | Sign-in |
 | --- | --- |
 | Codex | Codex CLI 0.160.1+ with ChatGPT; desktop sign-in alone is insufficient |
 | Claude | Claude Code 2.1.251+ with Pro/Max and its status-line helper below |
-| Cursor / Grok | Cursor desktop account |
-| Gemini | Antigravity CLI 1.1.11+ (`agy`) with Google and its helper below; Gemini CLI is unsupported |
+| Grok | A Grok Build subscription signed in with `grok login` |
+| Gemini | Antigravity CLI (`agy`) with a Google account. Gemini CLI and Application Default Credentials are unsupported |
 
-ato? v0.2.8 supports Cursor's encrypted sign-in storage. If Cursor or Grok asks
-for access, choose **Allow Cursor Access…** in ato? and approve the macOS Keychain
-prompt. **Always Allow** keeps permission after reopening; an app update may ask
-again because the app is ad-hoc signed. **Allow Once** lasts for the current app
-session. Automatic refresh never opens a Keychain prompt; denied access shows
-**—** until you choose to retry.
-ato? also uses Cursor's reported allowance period and reset time: monthly
-for legacy plans, or weekly for current shared-allowance plans. A weekly reading
-does not reuse monthly breakdowns or a monthly billing reset.
+Current source builds use a full circle for one allowance and split the circle for two.
+When both 5-hour and weekly allowances are present, 5h is on top and Week is on the bottom.
+If a refresh temporarily fails, the ring keeps its last known shape and hides unavailable values.
 
 ### Claude helper
 
@@ -51,21 +48,28 @@ Use a terminal session to update ato?.
 
 ### Gemini helper
 
-Merge into `~/.gemini/antigravity-cli/settings.json`, preserving other settings and custom status lines:
+Current source builds query Antigravity directly. If prompted in ato?, choose **Allow Antigravity Access…**.
+Use `agy` to renew an expired sign-in. The Gemini ring shows the standard Gemini allowance.
+Other model groups appear in its details when available. Existing status-line commands can stay in place.
+
+<details>
+<summary>Gemini status line for version 0.3.3</summary>
+
+Merge into `~/.gemini/antigravity-cli/settings.json`, preserving other settings and status lines.
 
 ```json
 {"statusLine":{"type":"command","command":"\"/Applications/Usage Rings.app/Contents/Helpers/UsageRingsStatusline\" --provider gemini","stack_with_default":true}}
 ```
 
-Use the actual app path, including `$HOME/Applications` if applicable. Both helpers receive readings through CLI activity;
-polling alone creates no new observation. Disconnect by removing only the helper invocation.
-Explicitly disabled limits, including their cached values, are not shown.
+Use the actual app path and run `agy` to receive a reading.
+
+</details>
 
 ## CLI and AI skill
 
-In **AI Tools**, choose **Set Up** or **Update** for Codex, Claude Code, Cursor, or Antigravity.
+In **AI Tools**, choose **Set Up** or **Update** for Codex, Claude Code, Grok Build (current source builds), or Antigravity.
 This installs the read-only CLI, [skill](Skills/usage-rings-budget/SKILL.md), and budget hook while preserving unrelated settings and edited files.
-In Codex CLI, approve the hook through `/hooks` and start a new session. Setup does not enable monitoring or connect status-line helpers.
+In Codex CLI, approve the hook through `/hooks` and start a new session. Grok Build runs the hook only in folders it trusts (`/hooks-trust`). Setup does not enable monitoring or connect status-line helpers. Existing Cursor Agent integrations can be disconnected from AI Tools.
 
 ```sh
 "/Applications/Usage Rings.app/Contents/Helpers/usage-rings" status --json --provider codex
@@ -80,23 +84,20 @@ When macOS asks, allow notifications in its permission dialog. If access was den
 ## Security and data FAQ
 
 **Reads:** Codex uses its CLI, which manages authentication/cache.
-Cursor/Grok read Cursor's session for HTTPS requests to `api2.cursor.sh`
-(older builds also use `cursor.com`).
-For Cursor's encrypted storage, ato? reads only the `Cursor Safe Storage`
-Keychain item, with interactive permission requested only by **Allow Cursor Access…**.
-The derived decryption key stays only in the host app's memory until it quits;
-neither the key nor decrypted sign-in is written to disk. No Keychain item or
-Cursor setting is changed by ato?; macOS manages the permission you grant.
-Redirects are rejected, and these internal endpoints may change. Claude/Gemini read
-only their helpers' usage caches; ato? does not launch Antigravity. No conversations,
+Current source builds request Grok Build billing from `cli-chat-proxy.grok.com` using the CLI's saved sign-in.
+In current source builds, Gemini reads Antigravity's unexpired access token from the CLI file or the
+`gemini` / `antigravity` Keychain item. It queries Google's
+`daily-cloudcode-pa.googleapis.com` and `cloudcode-pa.googleapis.com`.
+Grok Build and Antigravity manage their sign-ins and renewal. ato? does not launch these CLIs,
+write their credentials, or request interactive Keychain access during polling.
+Redirects are rejected. Claude reads its helper's local usage cache. No conversations,
 analytics, or usage go to the developer.
 
 Other processes on the same Mac can read usage, times, and display settings at `127.0.0.1:52388/v1/usage`, without credentials.
 Helper/widget caches are owner-only; sharing CLI output with an AI shares those values with its service.
 Update checks contact GitHub. No provider reads occur before consent.
 
-Antigravity supplies no observation timestamp. ato? filters the current value and latest 256 distinct readings;
-older replays can appear new. A reset never implies a full allowance.
+A reset never implies a full allowance.
 
 ## Build from source
 

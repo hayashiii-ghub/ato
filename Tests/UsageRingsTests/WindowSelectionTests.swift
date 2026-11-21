@@ -60,6 +60,40 @@ struct WindowSelectionTests {
         #expect(usage.remainingPercent(at: now) == nil)
     }
 
+    @Test func exhaustedWeeklyWindowBlocksTheFiveHourRingUntilRefreshed() {
+        for (service, sessionID, weekID) in [(UsageService.codex, "primary", "secondary"),
+                                            (.claude, "five_hour", "seven_day")] {
+            let reset = now.addingTimeInterval(30)
+            let session = UsageWindow(id: sessionID, title: "5 hours", usedPercent: 20,
+                                      resetsAt: now.addingTimeInterval(600), period: service == .codex ? .fiveHours : nil)
+            let exhausted = UsageWindow(id: weekID, title: "Week", usedPercent: 100,
+                                        resetsAt: reset, period: service == .codex ? .week : nil)
+            var usage = ServiceUsage(service: service, state: .ready, windows: [session, exhausted],
+                                     updatedAt: now, preferredPeriod: .fiveHours)
+            #expect(usage.headline == session)
+            #expect(usage.remainingPercent(for: session, at: now) == 80)
+            #expect(usage.remainingPercent(at: now) == 0)
+            #expect(usage.isRingBlockedByWeeklyLimit(at: now))
+            #expect(usage.remainingPercent(at: reset) == nil)
+            #expect(!usage.isRingBlockedByWeeklyLimit(at: reset))
+            usage.windows = [session, UsageWindow(id: weekID, title: "Week", usedPercent: 5,
+                                                  resetsAt: reset.addingTimeInterval(3600), period: exhausted.period)]
+            usage.updatedAt = reset
+            #expect(usage.remainingPercent(at: reset) == 80)
+            #expect(!usage.isRingBlockedByWeeklyLimit(at: reset))
+        }
+    }
+
+    @Test func modelSpecificClaudeLimitDoesNotBlockTheFiveHourRing() {
+        let session = UsageWindow(id: "five_hour", title: "5 hours", usedPercent: 20, resetsAt: nil)
+        let modelWeek = UsageWindow(id: "seven_day_opus", title: "Opus week", usedPercent: 100,
+                                    resetsAt: nil, period: .week)
+        let usage = ServiceUsage(service: .claude, state: .ready, windows: [session, modelWeek],
+                                 updatedAt: now, preferredPeriod: .fiveHours)
+        #expect(usage.remainingPercent(at: now) == 80)
+        #expect(!usage.isRingBlockedByWeeklyLimit(at: now))
+    }
+
     @Test func manualRingsAndDetailRowsStillRequireACurrentSuccessfulReading() {
         var usage = ServiceUsage(service: .codex, state: .ready, windows: [fiveHours],
                                  updatedAt: now.addingTimeInterval(-UsageSnapshot.maximumAge),
@@ -142,7 +176,20 @@ struct WindowSelectionTests {
         #expect(unknown.windows[0].period == nil)
     }
 
-    @Test func knownProviderBucketsCarryPeriodsAndCursorMonthlyUsageStaysUnclassified() throws {
+    @Test func codexUsesRecognizedPlansWhenTheServerOmitsDurations() throws {
+        let paid = Data(#"{"rateLimits":{"planType":"plus","primary":{"usedPercent":12},"secondary":{"usedPercent":48}}}"#.utf8)
+        #expect(try UsageResponseParser.codex(paid, now: now).windows.map(\.period) == [.fiveHours, .week])
+        for plan in ["free", "go", "unknown"] {
+            let data = Data(#"{"rateLimits":{"planType":"\#(plan)","primary":{"usedPercent":12}}}"#.utf8)
+            let usage = try UsageResponseParser.codex(data, now: now)
+            #expect(usage.headline?.title == (plan == "unknown" ? "Current window" : "This month"))
+            #expect(usage.headline?.period == nil)
+        }
+        let invalidMetadata = Data(#"{"rateLimits":{"planType":false,"primary":{"usedPercent":12},"individualLimit":{"remainingPercent":"unknown"}}}"#.utf8)
+        #expect(try UsageResponseParser.codex(invalidMetadata, now: now).windows.map(\.id) == ["primary"])
+    }
+
+    @Test func knownProviderBucketsCarryPeriods() throws {
         let claude = try JSONSerialization.data(withJSONObject: [
             "session_id": "synthetic-session", "cost": ["total_api_duration_ms": 1],
             "rate_limits": [
@@ -155,9 +202,8 @@ struct WindowSelectionTests {
         {"product":"antigravity","quota":{"gemini-5h":{"remaining_fraction":0.9,"reset_time":"2027-02-01T12:00:00Z"},"gemini-weekly":{"remaining_fraction":0.3,"reset_time":"2027-02-01T12:00:00Z"}}}
         """#.utf8)
         #expect(try AntigravityUsageParser.parse(gemini, now: now).windows.map(\.period) == [.fiveHours, .week])
-        let grok = Data(#"{"usagePercent":25,"nextResetTimestampUtc":"2027-02-01T12:00:00Z","hasNonZeroIncludedLimit":true}"#.utf8)
-        #expect(try UsageResponseParser.grokBot(grok, now: now).windows.first?.period == .week)
-        let cursor = Data(#"{"individualUsage":{"plan":{"totalPercentUsed":25}}}"#.utf8)
-        #expect(try UsageResponseParser.cursor(cursor, now: now).windows.allSatisfy { $0.period == nil })
+        let grok = Data(#"{"config":{"creditUsagePercent":25,"currentPeriod":{"type":"USAGE_PERIOD_TYPE_WEEKLY","end":"2027-02-01T12:00:00Z"}}}"#.utf8)
+        #expect(try UsageResponseParser.grokBuild(grok, now: now).windows.first?.period == .week)
+
     }
 }

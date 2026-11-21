@@ -14,9 +14,15 @@ struct UsageServiceDetails: View {
                 ForEach(usage.windows) { window in
                     GridRow(alignment: .firstTextBaseline) {
                         Text(window.title).foregroundStyle(.secondary)
-                        Text(usage.remainingPercent(for: window, at: date).map { "\(Int($0.rounded()))%" } ?? "—")
-                            .monospacedDigit()
-                            .gridColumnAlignment(.trailing)
+                        if let remaining = usage.remainingPercent(for: window, at: date) {
+                            Text("\(Int(remaining.rounded()))%")
+                                .monospacedDigit()
+                                .gridColumnAlignment(.trailing)
+                        } else {
+                            Color.clear.frame(width: 0, height: 0)
+                                .gridCellUnsizedAxes([.horizontal, .vertical])
+                                .accessibilityHidden(true)
+                        }
                         Text(resetText(window))
                             .foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity, alignment: .leading)

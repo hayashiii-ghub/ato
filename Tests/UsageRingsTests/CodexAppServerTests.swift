@@ -79,6 +79,19 @@ struct CodexAppServerTests {
         #expect(try fixture.methods().filter { $0 == "account/rateLimits/read" }.count == 2)
     }
 
+    @Test func monthlyCreditOnlyWorkspaceReadsThroughTheAppServerWithoutStoringAmounts() async throws {
+        let fixture = try Fixture("monthlyCredit")
+        defer { fixture.remove() }
+        let usage = try await fixture.read()
+        #expect(usage.state == .ready)
+        #expect(usage.windows.map(\.id) == ["individual"])
+        #expect(usage.remainingPercent(at: try #require(usage.updatedAt)) == 72)
+        #expect(usage.headline?.resetsAt == Date(timeIntervalSince1970: 2_100_000_000))
+        let sanitized = try String(decoding: JSONEncoder().encode(usage), as: UTF8.self)
+        #expect(!sanitized.contains("synthetic-private"))
+        #expect(try fixture.methods().filter { $0 == "account/rateLimits/read" }.count == 1)
+    }
+
     @Test func missingChatGPTLoginDoesNotStartLoginOrRequestRateLimits() async throws {
         let fixture = try Fixture("signedOut")
         defer { fixture.remove() }
@@ -277,6 +290,11 @@ for line in sys.stdin:
         assert msg['params'] == {'excludeResetCreditDetails': True}
         if scenario == 'lostSession':
             send({'id': msg['id'], 'error': {'code': -32600, 'message': 'codex account authentication required to read rate limits'}})
+            continue
+        if scenario == 'monthlyCredit':
+            credit = {'remainingPercent': 72, 'resetsAt': 2100000000, 'limit': 'synthetic-private-limit', 'used': 'synthetic-private-used'}
+            limits = {'limitId': 'codex', 'planType': 'enterprise_cbp_usage_based', 'primary': None, 'secondary': None, 'individualLimit': credit}
+            send({'id': msg['id'], 'result': {'rateLimits': limits}})
             continue
         reads += 1
         if scenario == 'notification': send({'method': 'account/rateLimits/updated', 'params': {'rateLimits': {'secondary': None}}})
