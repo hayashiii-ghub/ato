@@ -9,13 +9,12 @@ const allProviders: readonly Provider[] = [
   { name: "Codex", asset: "codex.svg" },
   { name: "Claude", asset: "claude.svg" },
   { name: "Gemini", asset: "gemini.svg" },
-  { name: "Grok", asset: "grokBot.svg" },
-  { name: "Cursor", asset: "cursor.svg" }
+  { name: "Grok", asset: "grokBot.svg" }
 ];
-const providers: Provider[] = allProviders.slice(0, 4);
+const providers: Provider[] = [...allProviders];
 const sampleReadings: Record<string, { normal: number; low: number }> = {
   Codex: { normal: 82, low: 18 }, Claude: { normal: 64, low: 9 },
-  Gemini: { normal: 48, low: 26 }, Grok: { normal: 71, low: 0 }, Cursor: { normal: 56, low: 12 }
+  Gemini: { normal: 48, low: 26 }, Grok: { normal: 71, low: 0 }
 };
 function sample(provider: Provider, state: DemoState): Reading {
   return state === "missing" ? null : sampleReadings[provider.name]?.[state] ?? null;
