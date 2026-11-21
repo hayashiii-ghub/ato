@@ -7,20 +7,18 @@ import WidgetKit
 final class UsageStore: ObservableObject {
     private static let preferenceKey = "usageMonitoringEnabled"
     private static let consentKey = "usageMonitoringConsentVersion"
-    private static let consentVersion = 1
+    private static let consentVersion = 2
     private static let ringOrderKey = "usageRingOrder"
-    private static let preferredPeriodsKey = "usagePreferredPeriods"
     @Published private(set) var snapshot: UsageSnapshot = .empty
     @Published private(set) var isRefreshing = false
-    @Published private(set) var isAuthorizingCursor = false
+    @Published private(set) var isAuthorizingAntigravity = false
     @Published private(set) var sharingError = false
     @Published private(set) var isEnabled: Bool
     @Published private(set) var needsConsent: Bool
     @Published private(set) var ringOrder: [UsageService]
-    @Published private(set) var preferredPeriods: [UsageService: UsagePeriod]
     private let defaults: UserDefaults
     private let fetch: @Sendable (UsageService) async -> ServiceUsage
-    private let authorizeCursor: @Sendable () async -> Void
+    private let authorizeAntigravity: @Sendable () async -> Void
     private let onPublish: @MainActor () -> Void
     private let onSnapshot: @MainActor (UsageSnapshot) -> Void
     private var pollingTask: Task<Void, Never>?
@@ -30,9 +28,9 @@ final class UsageStore: ObservableObject {
 
     init(defaults: UserDefaults = .standard,
          fetch: @escaping @Sendable (UsageService) async -> ServiceUsage = { await UsageClient.fetch($0) },
-         authorizeCursor: @escaping @Sendable () async -> Void = {
+         authorizeAntigravity: @escaping @Sendable () async -> Void = {
              await Task.detached(priority: .userInitiated) {
-                 _ = try? UsageCredentialReader.cursorToken(allowingKeychainInteraction: true)
+                 _ = try? AntigravityUsageClient.token(allowingInteraction: true)
              }.value
          },
          onPublish: @escaping @MainActor () -> Void = {
@@ -41,7 +39,7 @@ final class UsageStore: ObservableObject {
          onSnapshot: @escaping @MainActor (UsageSnapshot) -> Void = { _ in }) {
         self.defaults = defaults
         self.fetch = fetch
-        self.authorizeCursor = authorizeCursor
+        self.authorizeAntigravity = authorizeAntigravity
         self.onPublish = onPublish
         self.onSnapshot = onSnapshot
         // The pre-consent preference is preserved, but cannot authorize this connection method.
@@ -51,12 +49,7 @@ final class UsageStore: ObservableObject {
         isEnabled = resumesMonitoring
         let savedOrder = defaults.stringArray(forKey: Self.ringOrderKey)?.compactMap(UsageService.init(rawValue:))
         ringOrder = UsageSnapshot.normalizedRingOrder(savedOrder ?? UsageSnapshot.defaultRingOrder)
-        preferredPeriods = (defaults.dictionary(forKey: Self.preferredPeriodsKey) ?? [:]).reduce(into: [:]) { result, entry in
-            guard let service = UsageService(rawValue: entry.key), let rawPeriod = entry.value as? String,
-                  let period = UsagePeriod(rawValue: rawPeriod) else { return }
-            result[service] = period
-        }
-        snapshot = UsageSnapshot(services: applyingPreferredPeriods(to: UsageSnapshot.empty.services), ringOrder: ringOrder)
+        snapshot = UsageSnapshot(services: UsageSnapshot.empty.services, ringOrder: ringOrder)
     }
 
     /// Called only by the explicit enable action beside the connection explanation.
@@ -75,13 +68,9 @@ final class UsageStore: ObservableObject {
     }
 
     func selectRing(_ service: UsageService, at index: Int) {
-        guard ringOrder.indices.contains(index) else { return }
+        guard ringOrder.indices.contains(index), let previousIndex = ringOrder.firstIndex(of: service) else { return }
         var order = ringOrder
-        if let previousIndex = order.firstIndex(of: service) {
-            order.swapAt(index, previousIndex)
-        } else {
-            order[index] = service
-        }
+        order.swapAt(index, previousIndex)
         setRingOrder(order)
     }
 
@@ -93,31 +82,12 @@ final class UsageStore: ObservableObject {
         setRingOrder(order)
     }
 
-    func setPreferredPeriod(_ period: UsagePeriod?, for service: UsageService) {
-        guard preferredPeriods[service] != period else { return }
-        preferredPeriods[service] = period
-        let saved = Dictionary(uniqueKeysWithValues: preferredPeriods.map { ($0.key.rawValue, $0.value.rawValue) })
-        defaults.set(saved, forKey: Self.preferredPeriodsKey)
-        snapshot = UsageSnapshot(services: applyingPreferredPeriods(to: snapshot.services), ringOrder: ringOrder)
-        publish()
-    }
-
     private func setRingOrder(_ order: [UsageService]) {
-        let order = UsageSnapshot.normalizedRingOrder(order)
         guard order != ringOrder else { return }
-        let selectionChanged = Set(order) != Set(ringOrder)
-        if selectionChanged {
-            generation += 1
-            stopPolling()
-        }
         ringOrder = order
         defaults.set(order.map(\.rawValue), forKey: Self.ringOrderKey)
-        let readings = UsageService.allCases.map { service in
-            order.contains(service) ? snapshot.usage(for: service) : ServiceUsage(service: service, state: .disabled)
-        }
-        snapshot = UsageSnapshot(services: applyingPreferredPeriods(to: readings), ringOrder: order)
+        snapshot = UsageSnapshot(services: snapshot.services, ringOrder: order)
         publish()
-        if selectionChanged && isEnabled { start() }
     }
 
     func startIfEnabled() {
@@ -127,24 +97,22 @@ final class UsageStore: ObservableObject {
         if isEnabled { start() } else { publish() }
     }
 
-    var needsCursorAuthorization: Bool {
-        isEnabled && !needsConsent && ringOrder.contains { service in
-            (service == .cursor || service == .grokBot) && snapshot.usage(for: service).state == .setupRequired
-        }
+    var needsAntigravityAuthorization: Bool {
+        isEnabled && !needsConsent && snapshot.usage(for: .gemini).state == .setupRequired
     }
 
-    func authorizeCursorAccess() async {
-        guard needsCursorAuthorization, !isRefreshing, !isAuthorizingCursor else { return }
-        isAuthorizingCursor = true
+    func authorizeAntigravityAccess() async {
+        guard needsAntigravityAuthorization, !isRefreshing, !isAuthorizingAntigravity else { return }
+        isAuthorizingAntigravity = true
         let requestGeneration = generation
-        await authorizeCursor()
-        isAuthorizingCursor = false
+        await authorizeAntigravity()
+        isAuthorizingAntigravity = false
         guard generation == requestGeneration, isEnabled, !Task.isCancelled else { return }
         await refresh()
     }
 
     func refresh() async {
-        guard !needsConsent, isEnabled, !isRefreshing, !isAuthorizingCursor else { return }
+        guard !needsConsent, isEnabled, !isRefreshing, !isAuthorizingAntigravity else { return }
         isRefreshing = true
         let requestGeneration = generation
         defer {
@@ -157,12 +125,12 @@ final class UsageStore: ObservableObject {
         async let fourth = fetch(selectedServices[3])
         let readings = await [first, second, third, fourth]
         guard isEnabled, generation == requestGeneration, !Task.isCancelled else { return }
-        snapshot = UsageSnapshot(services: applyingPreferredPeriods(to: readings.map { reading in
+        snapshot = UsageSnapshot(services: readings.map { reading in
             guard reading.state == .unavailable else { return reading }
             var previous = snapshot.usage(for: reading.service)
             previous.state = .unavailable
             return previous
-        }), ringOrder: ringOrder)
+        }, ringOrder: ringOrder)
         publish()
     }
 
@@ -192,16 +160,8 @@ final class UsageStore: ObservableObject {
 
     private func stop() {
         stopPolling()
-        snapshot = UsageSnapshot(services: applyingPreferredPeriods(to: UsageSnapshot.empty.services), ringOrder: ringOrder)
+        snapshot = UsageSnapshot(services: UsageSnapshot.empty.services, ringOrder: ringOrder)
         publish()
-    }
-
-    private func applyingPreferredPeriods(to readings: [ServiceUsage]) -> [ServiceUsage] {
-        readings.map { reading in
-            var reading = reading
-            reading.preferredPeriod = preferredPeriods[reading.service]
-            return reading
-        }
     }
 
     private func publish() {

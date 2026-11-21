@@ -88,18 +88,18 @@ struct UsageNotificationTrackerTests {
         #expect(delivered(&tracker, report: report(remaining: 10, seconds: 2)).map(\.thresholdPercent) == [10])
     }
 
-    @Test func eachMainWindowIsIndependentAndCursorBreakdownsAreIgnored() {
+    @Test func eachMainWindowIsIndependentAndOtherGeminiModelsAreIgnored() {
         var tracker = UsageNotificationTracker()
-        let cursor = ServiceUsage(service: .cursor, state: .ready, windows: [
-            UsageWindow(id: "total", title: "This month", usedPercent: 10, resetsAt: nil),
-            UsageWindow(id: "other", title: "Other models", usedPercent: 99, resetsAt: nil)
+        let gemini = ServiceUsage(service: .gemini, state: .ready, windows: [
+            UsageWindow(id: "gemini-weekly", title: "Week", usedPercent: 10, resetsAt: nil, period: .week),
+            UsageWindow(id: "3p-weekly", title: "Other models", usedPercent: 99, resetsAt: nil, period: .week)
         ], updatedAt: now)
         let codex = ServiceUsage(service: .codex, state: .ready, windows: [
             window(remaining: 20),
             UsageWindow(id: "secondary", title: "Week", usedPercent: 90,
                         resetsAt: now.addingTimeInterval(604_800), period: .week)
         ], updatedAt: now, preferredPeriod: .fiveHours)
-        let notices = delivered(&tracker, report: UsageStatusReport(snapshot: UsageSnapshot(services: [cursor, codex]), now: now))
+        let notices = delivered(&tracker, report: UsageStatusReport(snapshot: UsageSnapshot(services: [gemini, codex]), now: now))
         #expect(notices.map(\.service) == [.codex, .codex])
         #expect(notices.map(\.windowID) == ["primary", "secondary"])
         #expect(notices.map(\.thresholdPercent) == [20, 10])

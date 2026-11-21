@@ -41,22 +41,14 @@ ditto "$ROOT_DIR/dist/Usage Rings.app" "$STAGED_APP"
 codesign --verify --deep --strict "$STAGED_APP"
 CLAUDE_SETUP=("$ROOT_DIR/script/claude-statusline-setup.py" --helper "$DESTINATION/Contents/Helpers/UsageRingsStatusline" --skip-existing)
 python3 "${CLAUDE_SETUP[@]}" --check
-GEMINI_SETUP=("$ROOT_DIR/script/antigravity-statusline-setup.py" --helper "$DESTINATION/Contents/Helpers/UsageRingsStatusline" --skip-existing)
-python3 "${GEMINI_SETUP[@]}" --check
 pkill -x UsageRings >/dev/null 2>&1 || true
 rm -rf "$DESTINATION"
 mv "$STAGED_APP" "$DESTINATION"
 CLAUDE_SETUP_STATUS=0
 python3 "${CLAUDE_SETUP[@]}" || CLAUDE_SETUP_STATUS=$?
-GEMINI_SETUP_STATUS=0
-python3 "${GEMINI_SETUP[@]}" || GEMINI_SETUP_STATUS=$?
 /usr/bin/open "$DESTINATION" --args -SUEnableAutomaticChecks NO
 echo "Installed: $DESTINATION"
 if [[ "$CLAUDE_SETUP_STATUS" != 0 ]]; then
   echo "ato? opened, but its Claude status line could not be configured." >&2
 fi
-if [[ "$GEMINI_SETUP_STATUS" != 0 ]]; then
-  echo "ato? opened, but its Antigravity status line could not be configured." >&2
-fi
-if [[ "$CLAUDE_SETUP_STATUS" != 0 ]]; then exit "$CLAUDE_SETUP_STATUS"; fi
-exit "$GEMINI_SETUP_STATUS"
+exit "$CLAUDE_SETUP_STATUS"

@@ -8,7 +8,7 @@ Keep notices in working context; tell the user only if asked or delivery is affe
 Registered hooks supply notices at their supported boundaries; do not repeat them manually. This skill itself neither registers hooks nor runs in the background.
 
 Without hooks, read once when starting substantial work and at natural pauses; do not poll repeatedly or automatically start/configure the app or providers.
-Use the task's account: `codex`, `claude`, `cursor`, `grok`, or `gemini` (Antigravity only); ask which only if unclear. After AI Tools setup, for Codex:
+Use the task's account: `codex`, `claude`, `grok`, or `gemini` (Antigravity only); ask which only if unclear. After AI Tools setup, for Codex:
 
 ```sh
 "$HOME/.local/bin/usage-rings" status --json --provider codex

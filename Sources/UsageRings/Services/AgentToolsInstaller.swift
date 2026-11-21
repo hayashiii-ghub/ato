@@ -3,12 +3,13 @@ import Darwin
 import Foundation
 
 enum AgentToolClient: String, CaseIterable, Identifiable, Sendable {
-    case codex, claude, cursor, antigravity
+    case codex, claude, grok, cursor, antigravity
     var id: String { rawValue }
     var displayName: String {
         switch self {
         case .codex: "Codex"
         case .claude: "Claude Code"
+        case .grok: "Grok Build"
         case .cursor: "Cursor Agent"
         case .antigravity: "Antigravity"
         }
@@ -17,6 +18,8 @@ enum AgentToolClient: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .codex: ".codex/hooks.json"
         case .claude: ".claude/settings.json"
+        // A file of its own: Grok loads every ~/.grok/hooks/*.json, and Disconnect can delete it whole.
+        case .grok: ".grok/hooks/usage-rings-budget.json"
         case .cursor: ".cursor/hooks.json"
         case .antigravity: ".gemini/config/hooks.json"
         }
@@ -25,6 +28,8 @@ enum AgentToolClient: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .codex: [".agents/skills/usage-rings-budget"]
         case .claude: [".claude/skills/usage-rings-budget"]
+        // Grok deduplicates skills by name, so this copy shadows the Codex/Claude ones it also scans.
+        case .grok: [".grok/skills/usage-rings-budget"]
         case .cursor: [".cursor/skills/usage-rings-budget"]
         case .antigravity: [".gemini/antigravity-cli/skills/usage-rings-budget", ".gemini/config/skills/usage-rings-budget"]
         }
@@ -408,6 +413,7 @@ struct AgentToolsInstaller: Sendable {
                 else { root["hooks"] = hooks }
                 if client == .cursor && !removing && root["version"] == nil { root["version"] = 1 }
             }
+            if client == .grok && root.isEmpty { return nil }
             return try JSONSerialization.data(withJSONObject: root, options: [.prettyPrinted, .sortedKeys]) + Data([10])
         }
         private static func hasSafeDepth(_ data: Data) -> Bool {

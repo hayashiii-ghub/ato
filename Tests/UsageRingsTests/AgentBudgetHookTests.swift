@@ -19,6 +19,12 @@ struct AgentBudgetHookTests {
         #expect(fixture.calls == AgentBudgetHookClient.allCases.map(\.provider))
     }
 
+    @Test func grokPayloadsOnlyKeyTheGrokRegistration() throws {
+        let payload = json(["sessionId": "grok-session", "hook_event_name": "PostToolUse", "hookEventName": "post_tool_use"])
+        #expect(AgentBudgetHook.sessionKey(client: .grok, payload: payload) != nil)
+        #expect(AgentBudgetHook.sessionKey(client: .claude, payload: payload) == nil)
+    }
+
     @Test func thresholdsAreStrictAndAnInitialReadingEmitsOnlyTheLowestCrossedStage() throws {
         let fixture = try Fixture(now: instant)
         for (remaining, stage) in [(20.0, nil), (19.9, 20), (10, 20), (9.9, 10), (5, 10), (4, 10), (0, 10)] {
@@ -324,7 +330,7 @@ struct AgentBudgetHookTests {
 
     @Test func argumentsRequireExplicitAbsoluteCLIAndRejectUnknownOrDuplicateOptions() {
         #expect(AgentBudgetHookOptions.parse(arguments: ["--client", "codex", "--cli", "/tmp/usage-rings"]) != nil)
-        for args in [[], ["--client", "codex"], ["--client", "grok", "--cli", "/tmp/cli"],
+        for args in [[], ["--client", "codex"], ["--client", "gemini", "--cli", "/tmp/cli"],
                      ["--client", "codex", "--cli", "relative"],
                      ["--client", "codex", "--cli", "/tmp/cli", "--state-dir", "relative"],
                      ["--client", "codex", "--cli", "/tmp/cli", "--cli", "/tmp/other"],
@@ -361,7 +367,7 @@ struct AgentBudgetHookTests {
 
     private func notice(_ value: [String: Any], client: AgentBudgetHookClient) throws -> String {
         switch client {
-        case .codex, .claude:
+        case .codex, .claude, .grok:
             #expect(Set(value.keys) == ["hookSpecificOutput"])
             let output = try #require(value["hookSpecificOutput"] as? [String: String])
             #expect(output["hookEventName"] == "PostToolUse")

@@ -53,7 +53,7 @@ struct UsageCLIResult {
 
 enum UsageCLI {
     static let help = """
-    Usage: usage-rings status [--json] [--provider codex|claude|cursor|grok|gemini] [--threshold PERCENT]
+    Usage: usage-rings status [--json] [--provider codex|claude|grok|gemini] [--threshold PERCENT]
            usage-rings --help
 
     Reads the running ato? app's current usage snapshot.

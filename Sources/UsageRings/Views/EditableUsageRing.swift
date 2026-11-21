@@ -10,20 +10,8 @@ struct EditableUsageRing: View {
     private static let dragPrefix = "usage-rings:"
 
     private var usage: ServiceUsage { store.snapshot.usage(for: service) }
-    private var periodOptions: [UsagePeriod] {
-        switch service {
-        case .claude, .gemini: return UsagePeriod.allCases
-        case .codex:
-            return UsagePeriod.allCases.filter { period in
-                usage.windows.contains { usage.period(for: $0) == period } || usage.preferredPeriod == period
-            }
-        case .cursor, .grokBot: return []
-        }
-    }
 
     var body: some View {
-        let remainingPercent = usage.remainingPercent(at: date).map { Int($0.rounded()) }
-
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 6) {
                 UsageRingView(usage: usage, date: date, size: 32, compact: true)
@@ -51,14 +39,8 @@ struct EditableUsageRing: View {
                 .labelsHidden()
                 .frame(width: 110, height: 28)
                 Spacer(minLength: 4)
-                periodPicker
-                Text(remainingPercent.map { "\($0)%" } ?? "—")
-                    .font(.system(size: 13, weight: .semibold))
-                    .monospacedDigit()
-                    .foregroundStyle(remainingPercent == nil ? .secondary : .primary)
-                    .frame(width: 42, alignment: .trailing)
-                    .accessibilityLabel("Remaining")
-                    .accessibilityValue(remainingPercent.map { "\($0) percent" } ?? "Unavailable")
+                UsageRingReadout(values: usage.ringValues(at: date))
+                    .frame(maxWidth: 120, alignment: .trailing)
                 Button {
                     isExpanded.toggle()
                 } label: {
@@ -76,35 +58,6 @@ struct EditableUsageRing: View {
                     .padding(.leading, 42)
                     .padding(.bottom, 12)
             }
-        }
-    }
-
-    @ViewBuilder
-    private var periodPicker: some View {
-        if !periodOptions.isEmpty {
-            Picker("Period for \(service.name)", selection: Binding<UsagePeriod?>(
-                get: { store.preferredPeriods[service] },
-                set: { store.setPreferredPeriod($0, for: service) }
-            )) {
-                Text("Auto").tag(Optional<UsagePeriod>.none)
-                ForEach(periodOptions) { period in
-                    Text(period.title).tag(Optional(period))
-                }
-            }
-            .pickerStyle(.menu)
-            .buttonSizing(.flexible)
-            .controlSize(.large)
-            .labelsHidden()
-            .frame(width: 82, height: 28)
-        } else {
-            Text(usage.headline?.title ?? "—")
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .frame(width: 82, height: 28)
-                .background(.quaternary, in: Capsule())
-                .accessibilityLabel("Period for \(service.name)")
-                .accessibilityValue(usage.headline?.title ?? "Unavailable")
         }
     }
 

@@ -13,9 +13,9 @@ struct UsageStatusReportTests {
         let usage = ServiceUsage(service: .codex, state: .ready, windows: windows, updatedAt: now,
                                  preferredPeriod: .fiveHours)
         #expect(usage.remainingPercent(at: now) == 90)
-        let snapshot = UsageSnapshot(services: [usage], ringOrder: [.grokBot, .cursor, .claude, .codex])
+        let snapshot = UsageSnapshot(services: [usage], ringOrder: [.grokBot, .gemini, .claude, .codex])
         let report = UsageStatusReport(snapshot: snapshot, now: now)
-        #expect(report.services.map(\.provider) == ["codex", "claude", "cursor", "grok", "gemini"])
+        #expect(report.services.map(\.provider) == ["codex", "claude", "grok", "gemini"])
         #expect(report.schemaVersion == 1)
         #expect(report.generatedAt == now)
         #expect(report.pollIntervalSeconds == 300)
@@ -99,23 +99,6 @@ struct UsageStatusReportTests {
         #expect(tolerated.limitingRemainingPercent == 75)
     }
 
-    @Test func cursorBreakdownsStayVisibleButDoNotReduceTheMainAllowance() {
-        let usage = ServiceUsage(service: .cursor, state: .ready, windows: [
-            UsageWindow(id: "total", title: "This month", usedPercent: 40, resetsAt: nil),
-            UsageWindow(id: "cursor", title: "Cursor models", usedPercent: 95, resetsAt: nil),
-            UsageWindow(id: "other", title: "Other models", usedPercent: 100, resetsAt: nil)
-        ], updatedAt: now, preferredPeriod: .week)
-        let service = status(usage)
-        #expect(service.state == "ready")
-        #expect(service.windows.map(\.isMain) == [true, false, false])
-        #expect(service.windows.map(\.remainingPercent) == [60, 5, 0])
-        #expect(service.limitingRemainingPercent == 60)
-        let missingTotal = ServiceUsage(service: .cursor, state: .ready,
-                                        windows: Array(usage.windows.dropFirst()), updatedAt: now)
-        #expect(status(missingTotal).state == "partial")
-        #expect(status(missingTotal).limitingRemainingPercent == nil)
-    }
-
     @Test func claudeAuxiliaryWindowsDoNotConstrainItsKnownMainPeriods() {
         let usage = ServiceUsage(service: .claude, state: .ready, windows: [
             UsageWindow(id: "five_hour", title: "5 hours", usedPercent: 10, resetsAt: nil),
@@ -128,6 +111,26 @@ struct UsageStatusReportTests {
         #expect(service.windows.map(\.period) == [.fiveHours, .week, nil])
         #expect(service.windows[2].state == "stale")
         #expect(service.limitingRemainingPercent == 60)
+    }
+
+    @Test func codexMonthlyCreditsOnlyConstrainUsageWithoutPlanWindows() throws {
+        let payload = Data(#"{"rateLimits":{"planType":"team","primary":{"usedPercent":20,"windowDurationMins":300,"resetsAt":1800000600},"individualLimit":{"remainingPercent":0,"resetsAt":1800000030}}}"#.utf8)
+        var usage = try UsageResponseParser.codex(payload, now: now)
+        var report = UsageStatusReport(snapshot: UsageSnapshot(services: [usage]), provider: .codex, now: now)
+        var notifications = UsageNotificationTracker()
+        #expect(report.services[0].windows.map(\.isMain) == [true, false])
+        #expect(report.services[0].windows.map(\.remainingPercent) == [80, 0])
+        #expect(report.services[0].limitingRemainingPercent == 80)
+        #expect(report.alerts.isEmpty)
+        #expect(notifications.notices(for: report).isEmpty)
+        #expect(usage.remainingPercent(at: now.addingTimeInterval(30)) == 80)
+        usage.windows.removeFirst()
+        report = UsageStatusReport(snapshot: UsageSnapshot(services: [usage]), provider: .codex, now: now)
+        #expect(usage.remainingPercent(at: now) == 0)
+        #expect(usage.remainingPercent(at: now.addingTimeInterval(30)) == nil)
+        #expect(report.services[0].limitingRemainingPercent == 0)
+        #expect(report.alerts.map(\.windowId) == ["individual"])
+        #expect(notifications.notices(for: report).map(\.windowID) == ["individual"])
     }
 
     @Test func invalidPercentagesAreUnknownAndNeverBreakJSONEncoding() throws {
@@ -206,10 +209,6 @@ struct UsageStatusReportTests {
             UsageWindow(id: "secondary", title: "Week", usedPercent: 100, resetsAt: now, period: .week),
             UsageWindow(id: "invalid", title: "Other window", usedPercent: .nan, resetsAt: nil)
         ], updatedAt: now, preferredPeriod: .week)
-        let cursor = ServiceUsage(service: .cursor, state: .ready, windows: [
-            UsageWindow(id: "total", title: "This month", usedPercent: 10, resetsAt: nil),
-            UsageWindow(id: "cursor", title: "Cursor models", usedPercent: 100, resetsAt: nil)
-        ], updatedAt: now)
         let claude = ServiceUsage(service: .claude, state: .ready, windows: [
             UsageWindow(id: "five_hour", title: "5 hours", usedPercent: 10, resetsAt: nil),
             UsageWindow(id: "spend_limit", title: "Spend limit", usedPercent: 100, resetsAt: nil)
@@ -220,7 +219,7 @@ struct UsageStatusReportTests {
         let grok = ServiceUsage(service: .grokBot, state: .ready, windows: [
             UsageWindow(id: "week", title: "Week", usedPercent: 100, resetsAt: nil, period: .week)
         ], updatedAt: now.addingTimeInterval(-1200))
-        let report = UsageStatusReport(snapshot: UsageSnapshot(services: [codex, cursor, claude, gemini, grok]), now: now)
+        let report = UsageStatusReport(snapshot: UsageSnapshot(services: [codex, claude, gemini, grok]), now: now)
         #expect(report.services[0].state == "partial")
         #expect(report.services[0].limitingRemainingPercent == nil)
         #expect(report.alerts.map(\.provider) == ["codex"])

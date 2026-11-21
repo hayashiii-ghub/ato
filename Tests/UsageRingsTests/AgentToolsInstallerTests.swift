@@ -48,6 +48,7 @@ struct AgentToolsInstallerTests {
         switch client {
         case .codex: configuration = ".codex/hooks.json"
         case .claude: configuration = ".claude/settings.json"
+        case .grok: configuration = ".grok/hooks/usage-rings-budget.json"
         case .cursor: configuration = ".cursor/hooks.json"
         case .antigravity: configuration = ".gemini/config/hooks.json"
         }
@@ -77,6 +78,18 @@ struct AgentToolsInstallerTests {
             let mode = try f.manager.attributesOfItem(atPath: backup.path)[.posixPermissions] as? NSNumber
             #expect(mode?.intValue == 0o600)
         }
+    }
+
+    @Test func grokOwnsAHookFileThatDisconnectDeletes() throws {
+        let f = try Fixture()
+        let installed = try f.installer.install(client: .grok)
+        #expect(installed.isInstalled)
+        let groups = try #require((f.json(".grok/hooks/usage-rings-budget.json")["hooks"] as? [String: Any])?["PostToolUse"] as? [[String: Any]])
+        #expect(groups.count == 1 && groups[0]["matcher"] as? String == ".*")
+        #expect(f.exists(".grok/skills/usage-rings-budget/SKILL.md"))
+        try f.installer.remove(client: .grok)
+        #expect(!f.exists(".grok/hooks/usage-rings-budget.json"))
+        #expect(!f.exists(".grok/skills/usage-rings-budget/SKILL.md"))
     }
 
     @Test func sharedCLIStaysUntilTheLastAssistantIsRemoved() throws {

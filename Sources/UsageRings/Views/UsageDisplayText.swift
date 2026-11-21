@@ -3,44 +3,33 @@ import UsageCore
 
 enum UsageDisplayText {
     static func status(_ usage: ServiceUsage, at date: Date) -> String? {
-        if usage.isCurrent(at: date), usage.headline != nil { return nil }
+        if usage.isFiveHourArcBlocked(at: date) { return "Weekly usage limit reached." }
+        if usage.ringValues(at: date).hasReading { return nil }
 
         switch usage.state {
         case .disabled: return "Enable AI usage to connect."
         case .setupRequired:
-            if usage.service == .cursor || usage.service == .grokBot {
-                return "Allow Cursor sign-in access in ato? to update usage."
-            }
             return usage.service == .gemini
-                ? "Connect the Antigravity status-line helper, then use agy. See the README for setup."
+                ? "Allow Antigravity sign-in access in ato? to update usage."
                 : "Install or update the Codex CLI, then refresh."
         case .signInRequired:
             switch usage.service {
             case .codex: return "Sign in to the Codex CLI with ChatGPT, then refresh."
-            case .cursor: return "Open Cursor and sign in, then refresh."
             case .claude: return "Use Claude Code in a terminal with the status-line helper, then refresh to receive usage."
-            case .grokBot: return "Sign in to Cursor with your Grok account, then refresh."
-            case .gemini: return "Use Antigravity with the status-line helper to receive usage."
+            case .grokBot: return "Run grok login for your Grok Build subscription, then refresh."
+            case .gemini: return "Sign in with Google in Antigravity or use agy to renew its session, then refresh."
             }
         case .unavailable:
-            return usage.service == .gemini
-                ? "Could not read the Antigravity status-line cache. Use agy with the helper connected."
-                : "Could not update. Try refreshing in a moment."
+            return "Could not update. Try refreshing in a moment."
         case .ready:
-            if let period = usage.preferredPeriod, usage.headline == nil {
-                return "No reading for the selected \(period.title) window yet."
-            }
-            let windows = usage.preferredPeriod == nil ? usage.windows : [usage.headline].compactMap { $0 }
-            if usage.hasFreshReading(at: date), windows.contains(where: { $0.resetsAt.map { $0 <= date } ?? false }) {
+            if usage.hasFreshReading(at: date), usage.windows.contains(where: { $0.resetsAt.map { $0 <= date } ?? false }) {
                 switch usage.service {
                 case .claude: return "A usage window has reset. Use Claude Code in a terminal, then refresh."
-                case .gemini: return "A usage window has reset. Use Antigravity to receive a new quota reading."
                 default: return "A usage window has reset. Refresh to receive a new reading."
                 }
             }
             switch usage.service {
             case .claude: return "Use Claude Code in a terminal, then refresh to update your usage."
-            case .gemini: return "Waiting for a new quota reading from Antigravity. Refresh only rereads its cache."
             default: return "Waiting for a fresh reading."
             }
         }

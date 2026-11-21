@@ -56,18 +56,6 @@ struct AntigravityUsageTests {
         #expect(usage.headline?.resetsAt == Date(timeIntervalSince1970: 1_801_483_200.125))
     }
 
-    @Test func passiveClientReadsOnlyItsCacheAndMissingCacheRequiresSetup() async throws {
-        let fixture = Fixture()
-        defer { fixture.remove() }
-        let missing = await AntigravityUsageClient.fetch(from: fixture.location)
-        #expect(missing.service == .gemini && missing.state == .setupRequired && missing.windows.isEmpty)
-        #expect(!FileManager.default.fileExists(atPath: fixture.folder.path))
-
-        let usage = try AntigravityUsageParser.parse(payload(), now: now)
-        try AntigravityStatuslineFile.write(usage, to: fixture.location)
-        #expect(await AntigravityUsageClient.fetch(from: fixture.location) == usage)
-    }
-
     @Test func cacheDropsPrivateMetadataAndUsesOwnerOnlyPermissions() throws {
         let fixture = Fixture()
         defer { fixture.remove() }
@@ -178,7 +166,6 @@ struct AntigravityUsageTests {
         for data in invalidData {
             try data.write(to: fixture.location)
             #expect(AntigravityStatuslineFile.read(from: fixture.location) == nil)
-            #expect(await AntigravityUsageClient.fetch(from: fixture.location).state == .setupRequired)
         }
     }
 

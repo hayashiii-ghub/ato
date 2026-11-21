@@ -4,13 +4,14 @@ import Darwin
 import Foundation
 
 public enum AgentBudgetHookClient: String, CaseIterable, Sendable {
-    case codex, claude, cursor, antigravity
+    case codex, claude, grok, cursor, antigravity
 
     public var provider: String { self == .antigravity ? "gemini" : rawValue }
 
     var sessionField: String {
         switch self {
         case .codex, .claude: "session_id"
+        case .grok: "sessionId"
         case .cursor: "conversation_id"
         case .antigravity: "conversationId"
         }
@@ -18,7 +19,7 @@ public enum AgentBudgetHookClient: String, CaseIterable, Sendable {
 
     var event: String {
         switch self {
-        case .codex, .claude: "PostToolUse"
+        case .codex, .claude, .grok: "PostToolUse"
         case .cursor: "postToolUse"
         case .antigravity: "PreInvocation"
         }
@@ -78,7 +79,10 @@ public enum AgentBudgetHook {
     }
 
     public static func run(options: AgentBudgetHookOptions, payload: Data) -> Data {
-        run(options: options, payload: payload, now: Date.init) { cli, client in
+        // Grok also runs Claude's settings hooks; only the Grok registration may report inside Grok.
+        guard options.client != .cursor,
+              options.client == .grok || ProcessInfo.processInfo.environment["GROK_HOOK_EVENT"] == nil else { return quiet }
+        return run(options: options, payload: payload, now: Date.init) { cli, client in
             AgentBudgetHookProcess.report(cli: cli, provider: client.provider)
         }
     }
@@ -222,12 +226,14 @@ public enum AgentBudgetHook {
         switch client {
         case .codex: label = "Codex"
         case .claude: label = "Claude"
+        case .grok: label = "Grok Build"
         case .cursor: label = "Cursor"
         case .antigravity: label = "Gemini (Antigravity)"
         }
         let periods = ["fiveHours": "5h", "week": "Week"]
         let known = ["primary": "Primary", "secondary": "Secondary", "five_hour": "5h", "seven_day": "Week",
-                     "fiveHours": "5h", "week": "Week", "total": "Month"]
+                     "fiveHours": "5h", "week": "Week", "total": "Month",
+                     "subscription": "Subscription"]
         let title = alert.period.flatMap { periods[$0] } ?? known[alert.id] ?? "window \(hash(alert.id).prefix(8))"
         let remaining = alert.remaining.rounded() == alert.remaining ? String(Int(alert.remaining)) : String(alert.remaining)
         let formatter = ISO8601DateFormatter()
@@ -250,7 +256,7 @@ public enum AgentBudgetHook {
         switch client {
         case .cursor: ["additional_context": notice]
         case .antigravity: ["injectSteps": [["ephemeralMessage": notice]]]
-        case .codex, .claude: ["hookSpecificOutput": ["hookEventName": "PostToolUse", "additionalContext": notice]]
+        case .codex, .claude, .grok: ["hookSpecificOutput": ["hookEventName": "PostToolUse", "additionalContext": notice]]
         }
     }
 

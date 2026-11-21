@@ -4,111 +4,111 @@ import UsageCore
 @testable import UsageRings
 
 @MainActor
-struct CursorAccessConsentTests {
-    @Test func cursorAuthorizationRequiresMonitoringConsentAndASelectedSetupState() async throws {
+struct AntigravityAccessConsentTests {
+    @Test func antigravityAuthorizationRequiresMonitoringConsentAndASelectedSetupState() async throws {
         for scenario in ["new", "off", "ready"] {
-            let suite = "CursorAccessConsentTests.\(UUID().uuidString)"
+            let suite = "AntigravityAccessConsentTests.\(UUID().uuidString)"
             let defaults = try #require(UserDefaults(suiteName: suite))
             defer { defaults.removePersistentDomain(forName: suite) }
             if scenario != "new" {
-                defaults.set(1, forKey: "usageMonitoringConsentVersion")
+                defaults.set(2, forKey: "usageMonitoringConsentVersion")
                 defaults.set(scenario == "ready", forKey: "usageMonitoringEnabled")
             }
-            let probe = CursorAccessProbe(states: [.codex: .setupRequired])
+            let probe = AntigravityAccessProbe(states: [.codex: .setupRequired])
             let store = UsageStore(defaults: defaults, fetch: { await probe.fetch($0) },
-                                   authorizeCursor: { await probe.authorize() }, onPublish: {})
+                                   authorizeAntigravity: { await probe.authorize() }, onPublish: {})
             defer { store.setEnabled(false) }
             if scenario == "ready" { await store.refresh() }
 
-            #expect(!store.needsCursorAuthorization)
-            await store.authorizeCursorAccess()
+            #expect(!store.needsAntigravityAuthorization)
+            await store.authorizeAntigravityAccess()
 
             #expect(await probe.authorizationCount == 0)
             #expect(await probe.fetchCount == (scenario == "ready" ? 4 : 0))
-            #expect(!store.isAuthorizingCursor)
+            #expect(!store.isAuthorizingAntigravity)
         }
     }
 
     @Test func deniedAccessStaysSetupRequiredWithoutAutomaticAuthorizationRetries() async throws {
-        let suite = "CursorAccessConsentTests.\(UUID().uuidString)"
+        let suite = "AntigravityAccessConsentTests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
-        defaults.set(1, forKey: "usageMonitoringConsentVersion")
+        defaults.set(2, forKey: "usageMonitoringConsentVersion")
         defaults.set(true, forKey: "usageMonitoringEnabled")
-        let probe = CursorAccessProbe(states: [.grokBot: .setupRequired])
+        let probe = AntigravityAccessProbe(states: [.gemini: .setupRequired])
         let store = UsageStore(defaults: defaults, fetch: { await probe.fetch($0) },
-                               authorizeCursor: { await probe.authorize() }, onPublish: {})
+                               authorizeAntigravity: { await probe.authorize() }, onPublish: {})
         defer { store.setEnabled(false) }
         await store.refresh()
-        #expect(store.needsCursorAuthorization)
+        #expect(store.needsAntigravityAuthorization)
 
-        await store.authorizeCursorAccess()
-        #expect(store.snapshot.usage(for: .grokBot).state == .setupRequired)
-        #expect(store.needsCursorAuthorization)
-        #expect(!store.isAuthorizingCursor)
+        await store.authorizeAntigravityAccess()
+        #expect(store.snapshot.usage(for: .gemini).state == .setupRequired)
+        #expect(store.needsAntigravityAuthorization)
+        #expect(!store.isAuthorizingAntigravity)
         #expect(await probe.authorizationCount == 1)
         #expect(await probe.fetchCount == 8)
 
         await store.refresh()
         await store.refresh()
         #expect(await probe.authorizationCount == 1)
-        #expect(store.snapshot.usage(for: .grokBot).state == .setupRequired)
+        #expect(store.snapshot.usage(for: .gemini).state == .setupRequired)
     }
 
     @Test(.timeLimit(.minutes(1))) func concurrentAuthorizationAndRefreshDoNotRepeatThePermissionRequest() async throws {
-        let suite = "CursorAccessConsentTests.\(UUID().uuidString)"
+        let suite = "AntigravityAccessConsentTests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
-        defaults.set(1, forKey: "usageMonitoringConsentVersion")
+        defaults.set(2, forKey: "usageMonitoringConsentVersion")
         defaults.set(true, forKey: "usageMonitoringEnabled")
-        let probe = CursorAccessProbe(states: [.grokBot: .setupRequired], blocksAuthorization: true)
+        let probe = AntigravityAccessProbe(states: [.gemini: .setupRequired], blocksAuthorization: true)
         let store = UsageStore(defaults: defaults, fetch: { await probe.fetch($0) },
-                               authorizeCursor: { await probe.authorize() }, onPublish: {})
+                               authorizeAntigravity: { await probe.authorize() }, onPublish: {})
         defer { store.setEnabled(false) }
         await store.refresh()
 
-        let authorization = Task { await store.authorizeCursorAccess() }
+        let authorization = Task { await store.authorizeAntigravityAccess() }
         await probe.waitForAuthorization()
-        #expect(store.isAuthorizingCursor)
-        await store.authorizeCursorAccess()
+        #expect(store.isAuthorizingAntigravity)
+        await store.authorizeAntigravityAccess()
         await store.refresh()
         #expect(await probe.authorizationCount == 1)
         #expect(await probe.fetchCount == 4)
 
         await probe.releaseAuthorization()
         await authorization.value
-        #expect(!store.isAuthorizingCursor)
+        #expect(!store.isAuthorizingAntigravity)
         #expect(await probe.authorizationCount == 1)
         #expect(await probe.fetchCount == 8)
     }
 
     @Test(.timeLimit(.minutes(1))) func disablingDuringAuthorizationCannotResumeReadsOrRestoreUsage() async throws {
-        let suite = "CursorAccessConsentTests.\(UUID().uuidString)"
+        let suite = "AntigravityAccessConsentTests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
-        defaults.set(1, forKey: "usageMonitoringConsentVersion")
+        defaults.set(2, forKey: "usageMonitoringConsentVersion")
         defaults.set(true, forKey: "usageMonitoringEnabled")
-        let probe = CursorAccessProbe(states: [.grokBot: .setupRequired], blocksAuthorization: true)
+        let probe = AntigravityAccessProbe(states: [.gemini: .setupRequired], blocksAuthorization: true)
         let store = UsageStore(defaults: defaults, fetch: { await probe.fetch($0) },
-                               authorizeCursor: { await probe.authorize() }, onPublish: {})
+                               authorizeAntigravity: { await probe.authorize() }, onPublish: {})
         await store.refresh()
 
-        let authorization = Task { await store.authorizeCursorAccess() }
+        let authorization = Task { await store.authorizeAntigravityAccess() }
         await probe.waitForAuthorization()
         store.setEnabled(false)
         await probe.releaseAuthorization()
         await authorization.value
 
         #expect(!store.isEnabled)
-        #expect(!store.isAuthorizingCursor)
-        #expect(!store.needsCursorAuthorization)
+        #expect(!store.isAuthorizingAntigravity)
+        #expect(!store.needsAntigravityAuthorization)
         #expect(store.snapshot == .empty)
         #expect(await probe.authorizationCount == 1)
         #expect(await probe.fetchCount == 4)
     }
 }
 
-private actor CursorAccessProbe {
+private actor AntigravityAccessProbe {
     private let states: [UsageService: UsageState]
     private var blocksAuthorization: Bool
     private var pendingAuthorization: CheckedContinuation<Void, Never>?

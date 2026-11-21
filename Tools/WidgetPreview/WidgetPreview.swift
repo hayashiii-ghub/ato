@@ -59,8 +59,10 @@ private struct ComparisonSheet: View {
 }
 
 private enum Fixture: String, CaseIterable {
-    case normal = "Normal", missing = "Missing", expired = "Expired", high = "High usage / exhausted"
-    case customOrder = "Gemini / custom order / 5-hour selection"
+    case normal = "Normal", narrow = "Narrow medium", missing = "Missing", expired = "Expired"
+    case partial = "5h awaiting refresh"
+    case high = "High usage / exhausted"
+    case customOrder = "Gemini / custom order / monthly Grok"
 
     static let now = Date(timeIntervalSince1970: 1_800_000_000)
 
@@ -70,18 +72,30 @@ private enum Fixture: String, CaseIterable {
         let order: [UsageService] = self == .customOrder
             ? [.gemini, .grokBot, .codex, .claude] : UsageSnapshot.defaultRingOrder
         return UsageSnapshot(services: zip(order, used).map { service, percent in
-            let selectsFiveHours = self == .customOrder && service == .gemini
-            var windows = [
-                UsageWindow(id: service == .claude ? "five_hour" : "total", title: "Usage",
-                            usedPercent: percent, resetsAt: nil, period: selectsFiveHours ? .fiveHours : nil)
-            ]
-            if selectsFiveHours {
-                windows.append(UsageWindow(id: "gemini-weekly", title: "Week", usedPercent: 80,
-                                           resetsAt: nil, period: .week))
+            let windows: [UsageWindow]
+            if service == .grokBot {
+                let weekly = self != .customOrder
+                windows = [UsageWindow(id: "subscription", title: weekly ? "Week" : "This month",
+                                       usedPercent: self == .narrow ? 0 : percent,
+                                       resetsAt: nil, period: weekly ? .week : nil)]
+            } else {
+                let ids: (String, String)
+                switch service {
+                case .claude: ids = ("five_hour", "seven_day")
+                case .gemini: ids = ("gemini-5h", "gemini-weekly")
+                default: ids = ("primary", "secondary")
+                }
+                let fullGemini = (self == .normal || self == .narrow) && service == .gemini
+                let weeklyUsed: Double = if self == .high { 100 } else if fullGemini { 0 } else { 60 - percent }
+                windows = [
+                    UsageWindow(id: ids.0, title: "5 hours", usedPercent: fullGemini ? 0 : percent,
+                                resetsAt: self == .partial ? Self.now : nil, period: .fiveHours),
+                    UsageWindow(id: ids.1, title: "Week", usedPercent: weeklyUsed,
+                                resetsAt: nil, period: .week)
+                ]
             }
             return ServiceUsage(service: service, state: .ready, windows: windows,
-                                updatedAt: Self.now.addingTimeInterval(self == .expired ? -UsageSnapshot.maximumAge : 0),
-                                preferredPeriod: selectsFiveHours ? .fiveHours : nil)
+                                updatedAt: Self.now.addingTimeInterval(self == .expired ? -UsageSnapshot.maximumAge : 0))
         }, ringOrder: order)
     }
 }
@@ -90,7 +104,7 @@ private struct PreviewSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             Text("ato? · SwiftUI render").font(.title2.bold())
-            Text("Synthetic fixtures · small 170 × 170 / medium 360 × 170 pt · 2× scale")
+            Text("Synthetic fixtures · small 170 × 170 / medium 328 or 360 × 170 pt · 2× scale")
                 .font(.caption).foregroundStyle(.secondary)
             HStack(alignment: .top, spacing: 24) {
                 column(.light)
@@ -121,9 +135,10 @@ private struct PreviewSheet: View {
     }
 
     private func card(_ fixture: Fixture, compact: Bool) -> some View {
-        UsageRingsView(snapshot: fixture.snapshot, date: Fixture.now, compact: compact)
+        let width: CGFloat = if compact { 170 } else if fixture == .narrow { 328 } else { 360 }
+        return UsageRingsView(snapshot: fixture.snapshot, date: Fixture.now, compact: compact)
             .padding(compact ? 14 : 18)
-            .frame(width: compact ? 170 : 360, height: 170)
+            .frame(width: width, height: 170)
             .background(.background, in: RoundedRectangle(cornerRadius: 22))
     }
 }

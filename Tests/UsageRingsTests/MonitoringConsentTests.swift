@@ -35,7 +35,7 @@ struct MonitoringConsentTests {
         try await waitForFetches(probe)
         #expect(!store.needsConsent)
         #expect(store.isEnabled)
-        #expect(defaults.integer(forKey: "usageMonitoringConsentVersion") == 1)
+        #expect(defaults.integer(forKey: "usageMonitoringConsentVersion") == 2)
         let enabledRelaunch = UsageStore(defaults: defaults, fetch: { await probe.fetch($0) }, onPublish: {})
         #expect(enabledRelaunch.isEnabled)
         #expect(!enabledRelaunch.needsConsent)
@@ -52,7 +52,7 @@ struct MonitoringConsentTests {
             let name = "UsageRingsConsentTests.\(UUID().uuidString)"
             let defaults = try #require(UserDefaults(suiteName: name))
             defer { defaults.removePersistentDomain(forName: name) }
-            defaults.set(1, forKey: "usageMonitoringConsentVersion")
+            defaults.set(2, forKey: "usageMonitoringConsentVersion")
             if let previous { defaults.set(previous, forKey: "usageMonitoringEnabled") }
             let probe = FetchProbe()
             let store = UsageStore(defaults: defaults, fetch: { await probe.fetch($0) }, onPublish: {})
@@ -97,18 +97,20 @@ struct MonitoringConsentTests {
         #expect(await probe.count == 4)
     }
 
-    @Test func unknownConsentVersionDoesNotAuthorizeFutureConnections() async throws {
+    @Test func previousAndUnknownConsentVersionsCannotAuthorizeTheNewConnections() async throws {
         let name = "UsageRingsConsentTests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: name))
         defer { defaults.removePersistentDomain(forName: name) }
-        defaults.set(999, forKey: "usageMonitoringConsentVersion")
-        defaults.set(true, forKey: "usageMonitoringEnabled")
-        let probe = FetchProbe()
-        let store = UsageStore(defaults: defaults, fetch: { await probe.fetch($0) }, onPublish: {})
-        #expect(store.needsConsent)
-        #expect(!store.isEnabled)
-        await store.refresh()
-        #expect(await probe.count == 0)
+        for version in [1, 999] {
+            defaults.set(version, forKey: "usageMonitoringConsentVersion")
+            defaults.set(true, forKey: "usageMonitoringEnabled")
+            let probe = FetchProbe()
+            let store = UsageStore(defaults: defaults, fetch: { await probe.fetch($0) }, onPublish: {})
+            #expect(store.needsConsent)
+            #expect(!store.isEnabled)
+            await store.refresh()
+            #expect(await probe.count == 0)
+        }
     }
 
     private func waitForFetches(_ probe: FetchProbe) async throws {
