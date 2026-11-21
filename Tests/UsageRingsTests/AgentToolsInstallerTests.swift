@@ -89,7 +89,19 @@ struct AgentToolsInstallerTests {
         #expect(f.exists(".grok/skills/usage-rings-budget/SKILL.md"))
         try f.installer.remove(client: .grok)
         #expect(!f.exists(".grok/hooks/usage-rings-budget.json"))
-        #expect(!f.exists(".grok/skills/usage-rings-budget/SKILL.md"))
+        #expect(!f.exists(".grok/skills/usage-rings-budget"))
+    }
+
+    @Test func updateAndDisconnectRemoveOnlyFoldersTheyEmptied() throws {
+        let f = try Fixture()
+        try f.installer.install(client: .claude)
+        try f.write(".claude/skills/keep/SKILL.md", "unrelated")
+        try f.manager.removeItem(at: f.app.appendingPathComponent("Contents/Resources/Skills/usage-rings-budget/scripts"))
+        #expect(try f.installer.install(client: .claude).isInstalled)
+        #expect(!f.exists(".claude/skills/usage-rings-budget/scripts"))
+        try f.installer.remove(client: .claude)
+        #expect(!f.exists(".claude/skills/usage-rings-budget"))
+        #expect(f.exists(".claude/skills/keep/SKILL.md"))
     }
 
     @Test func sharedCLIStaysUntilTheLastAssistantIsRemoved() throws {

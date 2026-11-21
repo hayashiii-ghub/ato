@@ -259,6 +259,20 @@ struct AgentToolsInstaller: Sendable {
             }
             result = readback.report
             transaction.finish()
+            // After commit, best effort: rmdir removes only folders this change emptied, never content.
+            for (index, directory) in inspection.skillDirectories.enumerated() {
+                let removed = Set(inspection.skillFiles[index].keys).subtracting(removing ? [] : Array(inspection.source.keys))
+                let folders = Set(removed.flatMap { file in
+                    var parts = file.split(separator: "/").dropLast().map(String.init)
+                    var result: [String] = []
+                    while !parts.isEmpty { result.append(parts.joined(separator: "/")); parts.removeLast() }
+                    return result
+                })
+                for folder in folders.sorted(by: { $0.count > $1.count }) {
+                    inspection.home.removeEmptyDirectory(directory + "/" + folder)
+                }
+                if removing { inspection.home.removeEmptyDirectory(directory) }
+            }
         } catch {
             let restored = transaction.rollback()
             if !restored { throw Failure("Setup stopped after a file changed concurrently. Review ato? setup files before retrying.") }
@@ -515,6 +529,11 @@ final class AgentToolsSafeHome {
             close(file); throw Failure("Another app copy is configuring AI tools. Try again when it finishes.")
         }
         return file
+    }
+    func removeEmptyDirectory(_ path: String) {
+        guard let (directory, name) = try? parent(path), directory >= 0 else { return }
+        defer { close(directory) }
+        _ = unlinkat(directory, name, AT_REMOVEDIR)
     }
     func node(_ path: String) throws -> Node? {
         let (directory, name) = try parent(path)
