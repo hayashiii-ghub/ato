@@ -105,7 +105,7 @@ See [AGENTS.md](AGENTS.md#development) for build, installation, website, and rel
 
 The existing `site/` build targets `ato-site-preview` by default and `ato-site` with `--mode production`. Only the production configuration declares `ato.shigoto.dev`; previews have no custom domain. Validate the actual DNS and HTTPS cutover separately from configuration and build success. The app and update feeds are unchanged.
 
-Use Node.js 24.22.1, Bun 1.4.4, and the Docker Compose `dev` service ([`compose.yaml`](compose.yaml), image `dev-environment:0.2.0`, built from `dev-environment/` in `hayashiii-ghub/dotfiles`). `site/package.json` and `bun.lock` pin cf `1.0.0-beta.28` and Wrangler `4.158.0`. cf runs on Node. Start Docker Desktop and run from this repository's root:
+Use Node.js 26.13.1 (`site/.node-version`), Bun 1.4.5 (`site/.bun-version`, `packageManager`), and the Docker Compose `dev` service ([`compose.yaml`](compose.yaml), image `dev-environment:0.3.0`, built from `dev-environment/` in `hayashiii-ghub/dotfiles`). `site/package.json` and `bun.lock` pin cf `1.0.0-beta.28` and Wrangler `4.158.0`. cf runs on Node. Start Docker Desktop and run from this repository's root:
 
 ```sh
 docker compose run --rm dev bun install --frozen-lockfile
@@ -123,7 +123,7 @@ Build and dry-run production with `docker compose run --rm dev bun run cf:check:
 
 After readiness checks and review, update code and domains from the Mac's `site/` directory with `fnm exec --using=24.22.1 cf deploy --prebuilt --mode production --worker ato-site --no-provision`. `--no-provision` only prevents missing binding resources from being created; it does not prevent domain changes. To update only domain settings on an already uploaded Worker, use `fnm exec --using=24.22.1 cf workers triggers deploy --prebuilt --mode production --worker ato-site` instead, after the same readiness checks. Then verify both [workers.dev](https://ato-site.hayashigoto.workers.dev/) and `https://ato.shigoto.dev`.
 
-After those readiness checks, enable Cloudflare Builds production publishing for `main` only. Set the root directory to `site/`, Node.js to 24.22.1, Bun to 1.4.4, the build command to `bun run check && bun run test && bun run cf:build:production`, and the deploy command to `node node_modules/cf/bin/cf deploy --prebuilt --mode production --worker ato-site`. Once enabled, main pushes run checks and publish; other branches do not publish production. The manual Mac commands above remain available.
+After those readiness checks, enable Cloudflare Builds production publishing for `main` only. Set the root directory to `site/`; Node.js and Bun come from `site/.node-version` and `packageManager` (26.13.1, 1.4.5). Set the build command to `bun run check && bun run test && bun run cf:build:production`, and the deploy command to `node node_modules/cf/bin/cf deploy --prebuilt --mode production --worker ato-site`. Once enabled, main pushes run checks and publish; other branches do not publish production. The manual Mac commands above remain available.
 
 Build Output is shared across modes and replaced by the last build. In cf beta.28, omitting `--mode` uses the mode recorded in that output; it does not select the preview target. Before a prebuilt command, inspect `buildContext.mode` in `.cloudflare/output/v0/config.json` and `name`/`domains` in `.cloudflare/output/v0/workers/default/worker.config.json`, then pass `--mode production --worker ato-site` for production output. Rebuild with `cf:check` before publishing to the preview Worker again.
 
