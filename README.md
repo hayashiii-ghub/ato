@@ -105,27 +105,21 @@ See [AGENTS.md](AGENTS.md#development) for build, installation, website, and rel
 
 The existing `site/` build targets `ato-site-preview` by default and `ato-site` with `--mode production`. Only the production configuration declares `ato.shigoto.dev`; previews have no custom domain. Validate the actual DNS and HTTPS cutover separately from configuration and build success. The app and update feeds are unchanged.
 
-Use Node.js 24.22.1, Bun 1.4.4, and `dev-environment:0.1.1`. `site/package.json` and `bun.lock` pin cf `1.0.0-beta.28` and Wrangler `4.158.0`. cf runs on Node.
-
-For first use, follow `/Users/hayashi/work/projects/dev-environment/README.md` to create and initialize `ato-cf-preview-home` and `ato-cf-preview-node-modules` with UID/GID `501:20`. Run from this repository's root:
+Use Node.js 24.22.1, Bun 1.4.4, and the Docker Compose `dev` service ([`compose.yaml`](compose.yaml), image `dev-environment:0.2.0`, built from `dev-environment/` in `hayashiii-ghub/dotfiles`). `site/package.json` and `bun.lock` pin cf `1.0.0-beta.28` and Wrangler `4.158.0`. cf runs on Node. Start Docker Desktop and run from this repository's root:
 
 ```sh
-container run -d --name ato-cf-preview-dev -w /workspace/site -e HOME=/home/dev \
-  -v "$PWD:/workspace" -v ato-cf-preview-home:/home/dev \
-  -v ato-cf-preview-node-modules:/workspace/site/node_modules \
-  -p 127.0.0.1:8796:8796 dev-environment:0.1.1 sleep infinity
-container exec -w /workspace/site ato-cf-preview-dev bunx --package bun@1.4.4 bun install --frozen-lockfile
-container exec -w /workspace/site ato-cf-preview-dev bunx --package bun@1.4.4 bun run check
-container exec -w /workspace/site ato-cf-preview-dev bunx --package bun@1.4.4 bun run test
-container exec -w /workspace/site ato-cf-preview-dev bunx --package bun@1.4.4 bun run cf:check
-container exec -it -w /workspace/site ato-cf-preview-dev bunx --package bun@1.4.4 bun run cf:dev
+docker compose run --rm dev bun install --frozen-lockfile
+docker compose run --rm dev bun run check
+docker compose run --rm dev bun run test
+docker compose run --rm dev bun run cf:check
+docker compose run --rm --service-ports dev bun run cf:dev
 ```
 
-Preview at `http://localhost:8796`. The website builds into `site/dist/`, Cloudflare Build Output into `site/.cloudflare/output/v0/`, and dependencies/cache stay in the named volumes. Stop the dev server with Ctrl+C, then `container stop ato-cf-preview-dev`. Resume with `container start ato-cf-preview-dev`.
+Preview at `http://localhost:8796`. The website builds into `site/dist/`, Cloudflare Build Output into `site/.cloudflare/output/v0/`, and dependencies/cache stay in the named volumes (`node_modules`, `home`). Ctrl+C stops the dev server and removes the container.
 
 Authenticate and deploy on the Mac. cf `1.0.0-beta.28` is installed globally in the Mac's existing Node.js 24.22.1 environment; the default Node.js environment is unchanged. Sign in with `fnm exec --using=24.22.1 cf auth login`, then run `fnm exec --using=24.22.1 cf deploy --prebuilt --worker ato-site-preview` from `site/` to publish a default build to the preview Worker. Do not copy credentials into the container.
 
-Build and dry-run production with `container exec -w /workspace/site ato-cf-preview-dev bunx --package bun@1.4.4 bun run cf:check:production`. Before any production deployment, confirm that the existing DNS is preserved, the zone is active, and HTTPS is ready. `cf deploy` also applies configured custom domains, so do not run it before these checks.
+Build and dry-run production with `docker compose run --rm dev bun run cf:check:production`. Before any production deployment, confirm that the existing DNS is preserved, the zone is active, and HTTPS is ready. `cf deploy` also applies configured custom domains, so do not run it before these checks.
 
 After readiness checks and review, update code and domains from the Mac's `site/` directory with `fnm exec --using=24.22.1 cf deploy --prebuilt --mode production --worker ato-site --no-provision`. `--no-provision` only prevents missing binding resources from being created; it does not prevent domain changes. To update only domain settings on an already uploaded Worker, use `fnm exec --using=24.22.1 cf workers triggers deploy --prebuilt --mode production --worker ato-site` instead, after the same readiness checks. Then verify both [workers.dev](https://ato-site.hayashigoto.workers.dev/) and `https://ato.shigoto.dev`.
 
