@@ -1,0 +1,15 @@
+# サイト（site/）の依存導入・開発・検査だけを container で行う。AI・Git・gh・cf の認証と公開は Mac で行う
+services:
+  dev:
+    image: dev-environment:0.3.0
+    working_dir: /workspace/site
+    volumes:
+      - .:/workspace
+      - node_modules:/workspace/site/node_modules
+      - home:/home/node
+    ports:
+      - "127.0.0.1:8796:8796"
+
+volumes:
+  node_modules: {}
+  home: {}
