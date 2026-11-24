@@ -27,6 +27,7 @@ Sign in separately. ato? does not start login flows. API-key billing is unsuppor
 
 ato? uses a full circle for one allowance and splits it for two.
 The medium widget labels the upper 5-hour allowance **5h** and the lower weekly allowance **W** when both are present.
+A monthly allowance, such as Codex Free and Go, is **M**; other fixed lengths read like **30d**, and **?** means the length is unknown.
 If a refresh temporarily fails, the ring keeps its last known shape and hides unavailable values.
 
 ### Claude helper
