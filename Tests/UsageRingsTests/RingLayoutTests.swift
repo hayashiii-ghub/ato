@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-import UsageCore
+@testable import UsageCore
 
 struct RingLayoutTests {
     @Test func legacySnapshotsKeepTheExistingFourRings() throws {
@@ -120,5 +120,12 @@ struct RingLayoutTests {
         #expect(usage.ringValues(at: now) == .split(top: .init(title: "Week", remaining: 80),
                                                  bottom: .init(title: "This month", remaining: 70)))
         #expect(ServiceUsage(service: .codex, state: .unavailable).ringValues(at: now) == .unknown)
+    }
+
+    @Test func widgetMarkersStayShortForEveryParsedWindowTitle() {
+        let markers = ["5h", "Week", "This month", "Monthly credits", "30 days", "12 hours", "Gemini · Week",
+                       "Subscription", "Current window", "Other window", "Gemini · Reported quota"]
+            .map { UsageRingValues.Reading(title: $0, remaining: 50).widgetMarker }
+        #expect(markers == ["5h", "W", "M", "M", "30d", "12h", "W", "?", "?", "?", "?"])
     }
 }

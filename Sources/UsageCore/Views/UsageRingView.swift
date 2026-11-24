@@ -109,7 +109,7 @@ private struct WidgetUsageReadout: View {
             ForEach(Array(readings.enumerated()), id: \.offset) { _, reading in
                 if let remaining = reading.remaining {
                     GridRow(alignment: .firstTextBaseline) {
-                        Text(marker(reading.title) + ":")
+                        Text(reading.widgetMarker + ":")
                             .foregroundStyle(.secondary)
                             .gridColumnAlignment(.leading)
                         Text("\(Int(remaining.rounded()))%")
@@ -122,11 +122,25 @@ private struct WidgetUsageReadout: View {
         .font(.system(size: 13, weight: .medium))
         .fixedSize()
     }
+}
 
-    private func marker(_ title: String) -> String {
-        switch title {
-        case UsagePeriod.week.title: "W"
-        default: title
+extension UsageRingValues.Reading {
+    // The fixed-size widget column fits only a few characters; the host app keeps full titles.
+    // Antigravity prefixes a model family ("Gemini · Week") that the ring's mark already shows.
+    var widgetMarker: String {
+        let name = title.components(separatedBy: " · ").last ?? title
+        switch name {
+        case "5h": return "5h"
+        case UsagePeriod.week.title: return "W"
+        case "This month", "Monthly credits": return "M"
+        default:
+            let parts = name.split(separator: " ")
+            guard parts.count == 2, let count = Int(parts[0]) else { return "?" }
+            switch parts[1] {
+            case "days": return "\(count)d"
+            case "hours": return "\(count)h"
+            default: return "?"
+            }
         }
     }
 }
