@@ -243,6 +243,27 @@ struct AgentToolsInstallerTests {
         #expect(try String(contentsOf: outside, encoding: .utf8) == "{\"private\":\"leave unchanged\"}")
     }
 
+    @Test func settingsLinkedInsideHomeAreEditedInPlaceAndTheLinkIsKept() throws {
+        let f = try Fixture()
+        try f.write("dotfiles/claude/settings.json", "{\"unrelated\":{\"keep\":true}}")
+        let link = f.home.appendingPathComponent(".claude/settings.json")
+        try f.manager.createDirectory(at: link.deletingLastPathComponent(), withIntermediateDirectories: true)
+        let target = f.home.resolvingSymlinksInPath().appendingPathComponent("dotfiles/claude/settings.json")
+        try f.manager.createSymbolicLink(at: link, withDestinationURL: target)
+
+        #expect(!f.installer.check(client: .claude).hasConflict)
+        let installed = try f.installer.install(client: .claude)
+        #expect(installed.isInstalled)
+        #expect(installed.hook.path == target.path)
+        #expect(try f.manager.destinationOfSymbolicLink(atPath: link.path) == target.path)
+        #expect(try f.json("dotfiles/claude/settings.json")["unrelated"] as? [String: Bool] == ["keep": true])
+        #expect(try f.json("dotfiles/claude/settings.json")["hooks"] != nil)
+
+        #expect(try !f.installer.remove(client: .claude).isInstalled)
+        #expect(try f.manager.destinationOfSymbolicLink(atPath: link.path) == target.path)
+        #expect(try f.json("dotfiles/claude/settings.json")["unrelated"] as? [String: Bool] == ["keep": true])
+    }
+
     @Test func symlinkedParentAndSkillAreRejectedBeforeMutation() throws {
         let f = try Fixture()
         let outside = f.root.appendingPathComponent("outside")

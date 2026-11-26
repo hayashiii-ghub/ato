@@ -20,12 +20,22 @@ final class UsageRingsApplication: NSObject, NSApplicationDelegate {
     })
     private let updateController = AppUpdateController()
     private let widgetRecovery = UsageWidgetRecovery()
-    private lazy var window: UsageWindowController = UsageWindowController(store: store, updateController: updateController, notifications: notifications)
+    // Owned here rather than by the view so quitting can wait for an install in progress.
+    private let agentTools = AgentToolsController()
+    private lazy var window = PanelController(
+        title: "ato?",
+        size: NSSize(width: 400, height: 395),
+        onClose: { [unowned self] in updateController.clearResult() }
+    ) { [unowned self] close in
+        UsageDetailsView(store: store, updateController: updateController, notifications: notifications,
+                         agentTools: agentTools, onClose: close)
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        updateController.onNeedsAttention = { [weak self] in self?.window.show() }
         updateController.start()
         store.startIfEnabled()
-        window.show()
+        if !LaunchAtLogin.wasLaunchedAtLogin { window.show() }
         Task { await widgetRecovery.recoverIfNeeded() }
     }
 
@@ -33,6 +43,10 @@ final class UsageRingsApplication: NSObject, NSApplicationDelegate {
         guard urls.contains(where: { $0.scheme == "usagerings" && $0.host == "usage" }) else { return }
         window.show()
         Task { await store.refresh() }
+    }
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        agentTools.isWorking ? .terminateCancel : .terminateNow
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {

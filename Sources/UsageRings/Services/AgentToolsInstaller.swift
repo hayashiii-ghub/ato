@@ -74,11 +74,9 @@ struct AgentToolsInstaller: Sendable {
         defer { Self.lock.unlock() }
         do { return try inspect(client: client).report }
         catch {
-            let message = error.localizedDescription
-            return AgentToolsReport(client: client,
-                cli: component(.conflict, Self.cliPath, message),
-                skill: component(.conflict, client.skillDirectories.joined(separator: ", "), message),
-                hook: component(.conflict, client.configuration, message), canRemove: false)
+            // The failure does not say which file it met, so no path is offered for revealing.
+            let failure = AgentToolsComponentReport(state: .conflict, path: "", message: error.localizedDescription)
+            return AgentToolsReport(client: client, cli: failure, skill: failure, hook: failure, canRemove: false)
         }
     }
 
@@ -119,6 +117,7 @@ struct AgentToolsInstaller: Sendable {
         let skillDirectories: [String]
         let skillFiles: [[String: Data]]
         let cli: AgentToolsSafeHome.Node?
+        let configurationPath: String
         let configurationData: Data?
         let hook: HookDocument
         let report: AgentToolsReport
@@ -185,15 +184,16 @@ struct AgentToolsInstaller: Sendable {
         case .outdated: skillMessage = "Update the bundled skill."
         case .conflict: skillMessage = "An existing or edited skill needs review."
         }
-        let configurationData = try home.read(client.configuration)
+        let configurationPath = try home.resolvingLink(client.configuration)
+        let configurationData = try home.read(configurationPath)
         let hook = try HookDocument(data: configurationData, client: client, registration: registration, desiredCommand: command(client))
         let report = AgentToolsReport(client: client,
             cli: component(cliState, Self.cliPath, cliMessage),
             skill: component(skillState, skillDirectories.joined(separator: ", "), skillMessage),
-            hook: component(hook.state, client.configuration, hook.message),
+            hook: component(hook.state, configurationPath, hook.message),
             canRemove: registration != nil && ![cliState, skillState, hook.state].contains(.conflict))
         return Inspection(home: home, manifestData: manifestData, ownership: ownership, source: source,
-                          skillDirectories: skillDirectories, skillFiles: skillFiles, cli: cli, configurationData: configurationData, hook: hook, report: report)
+                          skillDirectories: skillDirectories, skillFiles: skillFiles, cli: cli, configurationPath: configurationPath, configurationData: configurationData, hook: hook, report: report)
     }
 
     private func change(client: AgentToolClient, removing: Bool) throws -> AgentToolsReport {
@@ -222,7 +222,7 @@ struct AgentToolsInstaller: Sendable {
             }
             let nextConfiguration = try inspection.hook.updated(removing: removing)
             if nextConfiguration != inspection.configurationData {
-                try transaction.file(client.configuration, previous: inspection.configurationData, desired: nextConfiguration, backup: true)
+                try transaction.file(inspection.configurationPath, previous: inspection.configurationData, desired: nextConfiguration, backup: true)
             }
             if removing {
                 inspection.ownership.clients.removeValue(forKey: client.rawValue)
@@ -478,14 +478,17 @@ private struct Failure: LocalizedError {
 }
 
 /// Every destination is resolved from an open home directory, rejecting symlinks below it.
+/// The one exception is `resolvingLink`, which names the file a settings link points to inside the home folder.
 final class AgentToolsSafeHome {
     typealias RenameItem = (Int32, String, Int32, String, UInt32) -> Int32
     enum Node: Equatable { case file(Data), link(String) }
     let descriptor: Int32
     let requireOwnership: Bool
+    private let root: String
     private let renameItem: RenameItem
     init(_ url: URL, requireOwnership: Bool = true,
          renameItem: @escaping RenameItem = { renameatx_np($0, $1, $2, $3, $4) }) throws {
+        root = url.path
         self.requireOwnership = requireOwnership
         self.renameItem = renameItem
         descriptor = open(url.path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
@@ -573,6 +576,38 @@ final class AgentToolsSafeHome {
             data.append(contentsOf: buffer.prefix(count))
         }
         return .file(data)
+    }
+    /// A settings file may be a link to a file kept elsewhere under the home folder, such as a dotfiles
+    /// checkout. This returns that file's path, still relative to home, so every later step edits the real
+    /// file and leaves the link alone. Links that leave the home folder stay rejected, and the returned
+    /// path is walked like any other, so a linked folder on the way is still refused.
+    func resolvingLink(_ path: String) throws -> String {
+        let outside = Failure("A setup file links outside your home folder and needs review.")
+        var current = path
+        for _ in 0..<8 {
+            guard case .link(let target)? = try node(current) else { return current }
+            var pieces: [String]
+            let remainder: Substring
+            if target.hasPrefix("/") {
+                guard target.hasPrefix(root + "/") else { throw outside }
+                pieces = []
+                remainder = target.dropFirst(root.count + 1)
+            } else {
+                pieces = current.split(separator: "/").dropLast().map(String.init)
+                remainder = Substring(target)
+            }
+            for piece in remainder.split(separator: "/") where piece != "." {
+                if piece == ".." {
+                    guard !pieces.isEmpty else { throw outside }
+                    pieces.removeLast()
+                } else {
+                    pieces.append(String(piece))
+                }
+            }
+            guard !pieces.isEmpty else { throw outside }
+            current = pieces.joined(separator: "/")
+        }
+        throw Failure("A setup file is linked too many times to follow safely.")
     }
     func read(_ path: String) throws -> Data? {
         guard let node = try node(path) else { return nil }

@@ -6,52 +6,36 @@ struct UsageNotificationSettings: View {
     let monitoringEnabled: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Notifications")
-                .font(SettingsStyle.heading)
-                .foregroundStyle(.secondary)
-            Toggle("Low usage alerts", isOn: Binding(
+        SettingsSection {
+            SettingsToggle("Alert at 20% and 10% left", isOn: Binding(
                 get: { controller.isEnabled },
                 set: { enabled in Task { await controller.setEnabled(enabled) } }
             ))
             .disabled(controller.isRequestingAuthorization)
-            if controller.isRequestingAuthorization {
-                HStack(spacing: 6) {
-                    ProgressView().controlSize(.small)
-                    Text("Allow notifications in the macOS permission dialog.")
-                }
-                .font(SettingsStyle.caption)
-                .foregroundStyle(.secondary)
-            }
-            Text("Notify once at 20% and again at 10% for each allowance in your rings.")
-                .font(SettingsStyle.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-            Toggle("Play a sound", isOn: Binding(
+            SettingsToggle("Alert sound", isOn: Binding(
                 get: { controller.soundEnabled },
                 set: { controller.setSoundEnabled($0) }
             ))
             .disabled(!controller.isEnabled)
-            if controller.authorizationStatus == .denied {
-                Text("Allow notifications for ato? in System Settings → Notifications.")
-                    .font(SettingsStyle.caption)
-                    .foregroundStyle(.secondary)
+            if controller.isRequestingAuthorization {
+                SettingsRow("Allow notifications when macOS asks.") {
+                    ProgressView().controlSize(.small)
+                }
             }
             if controller.authorizationStatus == .denied {
-                Button("Open Notification Settings…") {
-                    if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension") {
-                        NSWorkspace.shared.open(url)
+                SettingsRow("Notifications are off for ato?") {
+                    Button("Open Settings…") {
+                        if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension") {
+                            NSWorkspace.shared.open(url)
+                        }
                     }
                 }
-                .font(SettingsStyle.caption)
             }
             if controller.isEnabled && !monitoringEnabled {
-                Text("Enable usage monitoring to receive alerts.")
-                    .font(SettingsStyle.caption)
-                    .foregroundStyle(.secondary)
+                SettingsNote("Enable usage monitoring to receive alerts.")
             }
             if let error = controller.errorMessage {
-                Text(error).font(SettingsStyle.caption).foregroundStyle(.orange)
+                SettingsNote(error, isWarning: true)
             }
         }
         .task { await controller.refreshAuthorization() }
