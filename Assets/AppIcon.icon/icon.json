@@ -1,4 +1,17 @@
 {
+  "fill-specializations" : [
+    {
+      "value" : {
+        "solid" : "extended-srgb:0.04314,0.04314,0.05098,1.00000"
+      }
+    },
+    {
+      "appearance" : "light",
+      "value" : {
+        "solid" : "extended-srgb:0.94902,0.95294,0.94510,1.00000"
+      }
+    }
+  ],
   "groups" : [
     {
       "blend-mode" : "normal",
@@ -8,11 +21,11 @@
           "hidden" : false,
           "image-name-specializations" : [
             {
-              "value" : "ring-light.svg"
+              "value" : "ring-dark.svg"
             },
             {
-              "appearance" : "dark",
-              "value" : "ring-dark.svg"
+              "appearance" : "light",
+              "value" : "ring-light.svg"
             }
           ],
           "name" : "ring",
@@ -21,7 +34,7 @@
       ],
       "shadow" : {
         "kind" : "neutral",
-        "opacity" : 0
+        "opacity" : 0.34000000000000002
       },
       "translucency" : {
         "enabled" : false,
@@ -36,20 +49,20 @@
           "hidden" : false,
           "image-name-specializations" : [
             {
-              "value" : "mark-light.svg"
+              "value" : "mark-dark.svg"
             },
             {
-              "appearance" : "dark",
-              "value" : "mark-dark.svg"
+              "appearance" : "light",
+              "value" : "mark-light.svg"
             }
           ],
           "name" : "mark",
-          "opacity" : 1
+          "opacity" : 0.90000000000000002
         }
       ],
       "shadow" : {
         "kind" : "neutral",
-        "opacity" : 0
+        "opacity" : 0.41999999999999998
       },
       "translucency" : {
         "enabled" : false,
