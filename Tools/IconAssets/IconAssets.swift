@@ -25,6 +25,8 @@ struct IconAssets {
         let light = try Palette(scheme: .light)
         let dark = try Palette(scheme: .dark)
         let ids = ["track", "ring", "question", "dot"]
+        let nativeLight = try Palette(scheme: .light, solidMark: true)
+        let nativeDark = try Palette(scheme: .dark, solidMark: true)
         let lightSVG = try svgData(svg, shapes: shapes, ids: ids, palette: light)
         let darkSVG = try svgData(svg, shapes: shapes, ids: ids, palette: dark)
         let faviconSVG = try faviconData(darkSVG)
@@ -35,18 +37,19 @@ struct IconAssets {
             ("Assets/AppIcon.icon/Assets/ring-dark.svg", try svgData(svg, shapes: shapes, ids: ["track", "ring"],
                                                                   palette: dark, scale: macArtworkScale)),
             ("Assets/AppIcon.icon/Assets/mark-light.svg", try svgData(svg, shapes: shapes, ids: ["question", "dot"],
-                                                                   palette: light, scale: macArtworkScale)),
+                                                                   palette: nativeLight, scale: macArtworkScale)),
             ("Assets/AppIcon.icon/Assets/mark-dark.svg", try svgData(svg, shapes: shapes, ids: ["question", "dot"],
-                                                                  palette: dark, scale: macArtworkScale))
+                                                                  palette: nativeDark, scale: macArtworkScale))
         ]
         let icon: [String: Any] = [
+            // An explicit dark specialization renders a flat fill; dark as the default keeps the system's gradient.
             "fill-specializations": [
-                ["value": ["solid": "extended-srgb:0.94902,0.95294,0.94510,1.00000"]],
-                ["appearance": "dark", "value": ["solid": "extended-srgb:0.04314,0.04314,0.05098,1.00000"]]
+                ["value": ["solid": "extended-srgb:0.04314,0.04314,0.05098,1.00000"]],
+                ["appearance": "light", "value": ["solid": "extended-srgb:0.94902,0.95294,0.94510,1.00000"]]
             ],
             "groups": [
-                nativeGroup("ring"),
-                nativeGroup("mark")
+                nativeGroup("ring", shadow: 0.34, opacity: 1),
+                nativeGroup("mark", shadow: 0.42, opacity: 0.9)
             ],
             "supported-platforms": ["squares": ["macOS"]]
         ]
@@ -74,17 +77,17 @@ struct IconAssets {
         }
     }
 
-    private static func nativeGroup(_ name: String) -> [String: Any] {
+    private static func nativeGroup(_ name: String, shadow: Double, opacity: Double) -> [String: Any] {
         [
             "blend-mode": "normal",
-            "shadow": ["kind": "neutral", "opacity": 0],
+            "shadow": ["kind": "neutral", "opacity": shadow],
             "translucency": ["enabled": false, "value": 0],
             // A native fill override fills stroke interiors; retain SVG paints in appearance-specific layers.
             "layers": [[
                 "image-name-specializations": [
-                    ["value": "\(name)-light.svg"],
-                    ["appearance": "dark", "value": "\(name)-dark.svg"]
-                ], "name": name, "glass": true, "hidden": false, "opacity": 1
+                    ["value": "\(name)-dark.svg"],
+                    ["appearance": "light", "value": "\(name)-light.svg"]
+                ], "name": name, "glass": true, "hidden": false, "opacity": opacity
             ]]
         ]
     }
@@ -117,12 +120,15 @@ struct IconAssets {
     private struct Palette {
         let track, ring, mark: RGBA
 
-        init(scheme: ColorScheme) throws {
+        init(scheme: ColorScheme, solidMark: Bool = false) throws {
             var environment = EnvironmentValues()
             environment.colorScheme = scheme
             track = try RGBA(Color.primary.opacity(0.13), environment: environment)
             ring = try RGBA(Color.green, environment: environment)
-            mark = try RGBA(Color.primary, environment: environment)
+            // The native mark takes the enclosure's inverse color; its layer opacity supplies the translucency.
+            let solid = scheme == .dark ? Color(red: 0.94902, green: 0.95294, blue: 0.94510)
+                : Color(red: 0.04314, green: 0.04314, blue: 0.05098)
+            mark = try RGBA(solidMark ? solid : Color.primary, environment: environment)
         }
 
         func color(for id: String) -> RGBA {
