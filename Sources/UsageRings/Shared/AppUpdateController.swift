@@ -30,6 +30,7 @@ final class AppUpdateController: NSObject, ObservableObject, SPUUserDriver {
     private var permissionReply: ((SUUpdatePermissionResponse) -> Void)?
     private var choiceReply: ((SPUUserUpdateChoice) -> Void)?
     private var cancellation: (() -> Void)?
+    private var resultExpiry: Task<Void, Never>?
     private var expectedLength: UInt64 = 0
     private var receivedLength: UInt64 = 0
 
@@ -113,6 +114,17 @@ final class AppUpdateController: NSObject, ObservableObject, SPUUserDriver {
         if case .message = status, canCheckForUpdates { status = .idle }
     }
 
+    /// A result is news for a moment, not a state: it leaves the footer by itself.
+    private func showResult(_ text: String, isError: Bool) {
+        status = .message(text, isError: isError)
+        resultExpiry?.cancel()
+        resultExpiry = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(isError ? 10 : 4))
+            guard !Task.isCancelled else { return }
+            self?.clearResult()
+        }
+    }
+
     private func reply(_ choice: SPUUserUpdateChoice) {
         let reply = choiceReply
         choiceReply = nil
@@ -151,12 +163,12 @@ final class AppUpdateController: NSObject, ObservableObject, SPUUserDriver {
     func showUpdateReleaseNotesFailedToDownloadWithError(_ error: Error) {}
 
     func showUpdateNotFoundWithError(_ error: Error, acknowledgement: @escaping () -> Void) {
-        status = .message(error.localizedDescription, isError: false)
+        showResult(error.localizedDescription, isError: false)
         acknowledgement()
     }
 
     func showUpdaterError(_ error: Error, acknowledgement: @escaping () -> Void) {
-        status = .message(error.localizedDescription, isError: true)
+        showResult(error.localizedDescription, isError: true)
         acknowledgement()
     }
 
