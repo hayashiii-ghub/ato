@@ -1,17 +1,19 @@
 import SwiftUI
 import UsageCore
 
-/// What is left in each of a service's allowances and how long until it comes back.
+/// What is left in each of the given allowances and how long until it comes back.
 struct UsageReadings: View {
     let usage: ServiceUsage
+    let windows: [UsageWindow]
     let date: Date
 
     var body: some View {
         // Fixed columns line the readings up from one ring to the next.
         Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 2) {
-            ForEach(usage.windows) { window in
+            ForEach(windows) { window in
                 GridRow(alignment: .firstTextBaseline) {
-                    Text(window.title)
+                    // The family, when a title names one, is shown once beside the group.
+                    Text(window.title.components(separatedBy: " · ").last ?? window.title)
                         .foregroundStyle(.secondary)
                         .frame(width: 46, alignment: .leading)
                     Text(usage.remainingPercent(for: window, at: date).map { "\(Int($0.rounded()))%" } ?? "–")
