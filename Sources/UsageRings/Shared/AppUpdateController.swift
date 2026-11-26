@@ -162,13 +162,15 @@ final class AppUpdateController: NSObject, ObservableObject, SPUUserDriver {
     func showUpdateReleaseNotes(with downloadData: SPUDownloadData) {}
     func showUpdateReleaseNotesFailedToDownloadWithError(_ error: Error) {}
 
+    // Sparkle words its results in the system language whenever the host bundle carries that
+    // localization, which would put one translated sentence into an English interface.
     func showUpdateNotFoundWithError(_ error: Error, acknowledgement: @escaping () -> Void) {
-        showResult(error.localizedDescription, isError: false)
+        showResult("You’re up to date.", isError: false)
         acknowledgement()
     }
 
     func showUpdaterError(_ error: Error, acknowledgement: @escaping () -> Void) {
-        showResult(error.localizedDescription, isError: true)
+        showResult("Couldn’t check for updates.", isError: true)
         acknowledgement()
     }
 

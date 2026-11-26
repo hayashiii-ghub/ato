@@ -22,11 +22,12 @@ struct AppUpdateControllerTests {
     @Test @MainActor func aResultStaysReadableAfterSparkleEndsTheSession() {
         let updates = AppUpdateController()
         var acknowledged = false
-        let upToDate = NSError(domain: "test", code: 1, userInfo: [NSLocalizedDescriptionKey: "You’re up to date!"])
+        // Sparkle's own wording follows the system language; the app answers in its own.
+        let upToDate = NSError(domain: "test", code: 1, userInfo: [NSLocalizedDescriptionKey: "最新です"])
         updates.showUpdateNotFoundWithError(upToDate) { acknowledged = true }
         updates.dismissUpdateInstallation()
         #expect(acknowledged)
-        #expect(updates.status == .message("You’re up to date!", isError: false))
+        #expect(updates.status == .message("You’re up to date.", isError: false))
 
         var cancelled = false
         updates.showUserInitiatedUpdateCheck(cancellation: { cancelled = true })
